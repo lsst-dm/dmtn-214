@@ -656,10 +656,15 @@ Note that storage sizes can only be increased, never decreased.
 Updating the alert schema
 -------------------------
 
-For background, read DMTN-210's section `3.4.4: Schema Synchronization Job <https://dmtn-210.lsst.io/#schema-synchronization-job>`__.
+For background, you might want to read DMTN-210's section `3.4.4: Schema Synchronization Job <https://dmtn-210.lsst.io/#schema-synchronization-job>`__.
 
-The high-level steps are to commit your changes in the lsst/alert_packet repository, grab a reference to the automatically built lsst/alert_packet container, reference that release in the alert-stream-schema-registry chart, and then apply the change.
-Then, you'll update the simulator to generate simulated alerts which use the new alert packet version.
+The high-level steps are to:
+
+ - Commit your changes in the lsst/alert_packet repository, obeying its particular versioning system
+ - Build a new lsstdm/lsst_alert_packet container
+ - Publish a new lsst-alert-packet Python package
+ - Load the schema into the schema registry, incrementing the Schema ID
+ - Update the alert-stream-simulator to use the new Python package and new schema ID
 
 Making a new alert schema
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -671,8 +676,8 @@ You could put a new schema in python/lsst/alert/packet/schema/4/1.
 Start by copying the current schema into the new directory, and then make your changes.
 Then, update `python/lsst/alert/packet/schema/latest.txt <https://github.com/lsst/alert_packet/blob/main/python/lsst/alert/packet/schema/latest.txt>`__ to reference the new schema version number.
 
-Creating a container
-~~~~~~~~~~~~~~~~~~~~
+Creating a container which loads the schema
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When you are satisfied with your changes, push them and open a PR.
 As long as your github branch starts with "tickets/" or is tagged, this will automatically kick off the "`build_sync_container <https://github.com/lsst/alert_packet/blob/main/.github/workflows/build_sync_container.yml>`__" GitHub Actions job, which will create a Docker container holding the alert schema.
@@ -816,6 +821,35 @@ The mesages should be encoded using your new schema.
 
 Changing the sample alert data
 ------------------------------
+
+The sample alert data used by the alert stream simulator is set in a Makefile:
+
+.. code-block:: make
+
+    .PHONY: datasets
+    datasets: data/rubin_single_ccd_sample.avro data/rubin_single_visit_sample.avro
+
+    data:
+            mkdir -p data
+
+    data/rubin_single_ccd_sample.avro: data
+            wget --no-verbose --output-document data/rubin_single_ccd_sample.avro https://lsst.ncsa.illinois.edu/~ebellm/sample_precursor_alerts/latest_single_ccd_sample.avro
+
+    data/rubin_single_visit_sample.avro: data
+            wget --no-verbose --output-document data/rubin_single_visit_sample.avro https://lsst.ncsa.illinois.edu/~ebellm/sample_precursor_alerts/latest_single_visit_sample.avro
+
+The last two show what's happening.
+The sample alerts are downloaded from https://lsst.ncsa.illinois.edu/~ebellm/sample_precursor_alerts/latest_single_visit_sample.avro.
+
+The sample alerts could be retrieved from anywhere else.
+The important things are that they should be encoded in Avro Object Container File format (that is, with all alerts in one file, preceded by a single instance of the Avro schema), and that they should represent a single visit of alert packet data.
+
+Make changes to the makefile to get data from somewhere else, and then merge your changes.
+Make a git tag using the format ``vX.Y.Z``, for example ``v1.3.10``, and push that git tag up.
+This will trigger a build job for the container using the new tag.
+
+Next, copy that tag into `charts/alert-stream-simulator/values.yaml <https://github.com/lsst-sqre/charts/blob/aa8f4db9a8844d94407b492dac14b56014cecd02/charts/alert-stream-simulator/values.yaml#L35>`__, and follow the instructions from :ref:`deploying-a-change`.
+This will configure the alert stream simulator to use the new alert data, publishing it every 37 seconds.
 
 Deploying on a new Kubernetes cluster on Google
 -----------------------------------------------
