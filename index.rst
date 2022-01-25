@@ -350,7 +350,7 @@ Checking Kafka logs
 
 Search for the following:
 
-.. code-block::
+.. code-block:: yaml
 
    resource.type="k8s_container"
    resource.labels.container_name="kafka"
@@ -362,7 +362,7 @@ Checking Strimzi logs
 
 Search for the following:
 
-.. code-block::
+.. code-block:: yaml
 
    resource.type="k8s_container"
    resource.labels.namespace_name="strimzi"
@@ -372,7 +372,7 @@ Checking Strimzi Registry Operator logs
 
 Search for the following:
 
-.. code-block::
+.. code-block:: yaml
 
    resource.type="k8s_container"
    resource.labels.namespace_name="strimzi-registry-operator"
@@ -382,7 +382,7 @@ Checking Schema Registry logs
 
 Search for the following:
 
-.. code-block::
+.. code-block:: yaml
 
    resource.type="k8s_container"
    resource.labels.pod_name:"alert-schema-registry"
@@ -393,7 +393,7 @@ Checking Alert Database logs
 
 Search for the following:
 
-.. code-block::
+.. code-block:: yaml
 
    resource.type="k8s_container"
    resource.labels.pod_name:"alert-database"
@@ -404,7 +404,7 @@ Checking Alert Stream Simulator logs
 
 Search for the following:
 
-.. code-block::
+.. code-block:: yaml
 
    resource.type="k8s_container"
    resource.labels.pod_name="alert-stream-simulator"
@@ -464,6 +464,7 @@ Adding a new user account
 -------------------------
 
 First, generate new credentials for the user:
+
 1. Log in to 1Password in the LSST IT account.
 2. Go to the "RSP-Vault" vault.
 3. Create a new secret.
