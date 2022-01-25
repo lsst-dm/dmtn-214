@@ -632,6 +632,19 @@ Note though that you'll be synchronizing the 'strimzi' application in Argo, not 
 Resizing Kafka broker disk storage
 ----------------------------------
 
+Some reference reading:
+
+ - DMTN-210's section `3.2.1.3: Storage <https://dmtn-210.lsst.io/#storage>`__.
+ - "`Persistent storage improvements <https://strimzi.io/blog/2019/07/08/persistent-storage-improvements/>`__"
+
+Change the alert-stream-broker.kafka.storage.size value in `services/alert-stream-broker/values-idfint.yaml <https://github.com/lsst-sqre/phalanx/blob/master/services/alert-stream-broker/values-idfint.yaml#L20>`__ in github.com/lsst-sqre/phalanx.
+This is the amount of disk space *per broker instance*.
+
+Apply the change, as described in :ref:`deploying-a-change`.
+
+This may take a little while to apply, since it is handled through the asynchronous Kafka operator, which reconciles storage size every few minutes.
+When it starts reconciling, it rolls the change out gradually across the Kafka cluster to maintain availability.
+
 Updating the alert schema
 -------------------------
 
