@@ -172,8 +172,9 @@ Tool Setup
 ==========
 
 .. _kubectl:
+
 Getting ``kubectl`` Access
-----------------------
+--------------------------
 
 1. Install ``kubectl``: https://kubernetes.io/docs/tasks/tools/
 2. Install ``gcloud``: https://cloud.google.com/sdk/docs/install
@@ -189,6 +190,7 @@ You should now have ``kubectl`` access. Try :command:`kubectl get kafka --namesp
   alert-broker   3                        3                     True
 
 .. _running-kowl:
+
 Running Kowl
 ------------
 
@@ -215,6 +217,7 @@ Running Kowl
 3. Go to http://localhost:8080
 
 .. _superuser-creds:
+
 Retrieving Kafka superuser credentials
 --------------------------------------
 
@@ -236,6 +239,7 @@ For the password:
 4. Copy the password from the password field.
 
 .. _developer-creds:
+
 Retrieving development credentials
 ----------------------------------
 
@@ -446,7 +450,7 @@ Changing passwords
 
 Then verify that the change was successful by checking it in Argo.
 
-1. Log in to Argo (see also :ref:`accessing_argo`).
+1. Log in to Argo (see also :ref:`accessing-argo`).
 2. Navigate to the "alert-stream-broker" application.
 3. In the "filters" on the left side, search for your targeted username in the "Name" field.
    You should see a filtered set of resources now.
@@ -517,6 +521,7 @@ Verify that the user was removed from Kafka by using Kowl and going to the "Acce
 The user shouldn't be in the ACLs anymore.
 
 .. _grant_access_to_topic:
+
 Granting users read-only access to a new topic
 ----------------------------------------------
 
@@ -583,6 +588,7 @@ Making Changes
 ==============
 
 .. _deploying-a-change:
+
 Deploying a change with Argo
 ----------------------------
 
@@ -776,7 +782,7 @@ At the top of the screen, you should see the "Schema ID" of the schema you have 
 This integer is an ID we'll need to reference later.
 
 Updating the Alert Stream Simulator values
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You're almost done.
 We need to update the alert stream simulator deployment to use the new container version, and to use the new schema ID.
