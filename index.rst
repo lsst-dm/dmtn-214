@@ -851,8 +851,123 @@ This will trigger a build job for the container using the new tag.
 Next, copy that tag into `charts/alert-stream-simulator/values.yaml <https://github.com/lsst-sqre/charts/blob/aa8f4db9a8844d94407b492dac14b56014cecd02/charts/alert-stream-simulator/values.yaml#L35>`__, and follow the instructions from :ref:`deploying-a-change`.
 This will configure the alert stream simulator to use the new alert data, publishing it every 37 seconds.
 
-Deploying on a new Kubernetes cluster on Google
------------------------------------------------
+Deploying on a new Kubernetes cluster on Google Kubernetes Engine
+-----------------------------------------------------------------
+
+Deploying on a new Kubernetes cluster will take a lot of steps, and has not been done before, so this section is somewhat speculative.
+
+Prerequisites
+~~~~~~~~~~~~~
+
+There are certain prerequisites before even starting.
+These are systems that are dependencies of the alert distribution system's current implementation, so they must be present already.
+
+They are:
+
+ - **Argo CD** should be installed and configured to make deployment possible using configuration from Phalanx and Helm.
+   This means there should be some "environment" analogous to "idfint" which is used in the IDF integration deployment.
+ - **Gafaelfawr** should be installed to set up the ingress for the alert database.
+ - **cert-manager** should be installed so that broker TLS certificates can be automatically provisioned.
+ - The **nginx** ingress controller should be installed to set up the ingress for the schema registry.
+ - Workload Identity needs to be configured properly (for example, through Terraform) on the Google Kubernetes Engine instance to allow the alert database to gain permissions to interact with Google Cloud Storage buckets.
+
+Preparation with Terraform
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Before starting, some resources should be provisioned, presumably using Terraform:
+
+ - A node pool for Kafka instances to run on.
+ - Storage buckets for alert packets and schemas.
+ - IAM roles providing access to the storage buckets for the alert database ingester and server (as writer and reader, respectively).
+
+The current node pool configuration in the IDFINT environment can be found in the `environments/deployments/science-platform/env/integration-gke.tf <https://github.com/lsst/idf_deploy/blob/main/environment/deployments/science-platform/env/integration-gke.tfvars#L48-L64>`__ file:
+
+.. code-block:: terraform
+   :emphasize-lines: 1-17,28-30,36-42
+
+     {
+       name = "kafka-pool"
+       machine_type = "n2-standard-32"
+       node_locations     = "us-central1-b"
+       local_ssd_count    = 0
+       auto_repair        = true
+       auto_upgrade       = true
+       preemptible        = false
+       image_type         = "cos_containerd"
+       enable_secure_boot = true
+       disk_size_gb       = "500"
+       disk_type          = "pd-standard"
+       autoscaling        = true
+       initial_node_count = 1
+       min_count          = 1
+       max_count          = 10
+     }
+   ]
+
+   node_pools_labels = {
+     core-pool = {
+       infrastructure = "ok",
+       jupyterlab = "ok"
+     },
+     dask-pool = {
+       dask = "ok"
+     },
+     kafka-pool = {
+       kafka = "ok"
+     }
+   }
+
+   node_pools_taints = {
+     core-pool = [],
+     dask-pool = []
+     kafka-pool = [
+       {
+         effect = "NO_SCHEDULE"
+         key = "kafka",
+         value = "ok"
+       }
+     ]
+   }
+
+Storage bucket configuration is in `environment/deployments/science-platform/env/integration-alertdb.tfvars <https://github.com/lsst/idf_deploy/blob/main/environment/deployments/science-platform/env/integration-alertdb.tfvars>`__:
+
+.. code-block:: terraform
+
+    # Project
+    environment = "int"
+    project_id  = "science-platform-int-dc5d"
+
+    # In integration, only keep 4 weeks of simulated alert data.
+    purge_old_alerts  = true
+    maximum_alert_age = 28
+
+    writer_k8s_namespace           = "alert-stream-broker"
+    writer_k8s_serviceaccount_name = "alert-database-writer"
+    reader_k8s_namespace           = "alert-stream-broker"
+    reader_k8s_serviceaccount_name = "alert-database-reader"
+
+    # Increase this number to force Terraform to update the int environment.
+    # Serial: 2
+
+This references the `environment/deployments/science-platform/alertdb <https://github.com/lsst/idf_deploy/blob/main/environment/deployments/science-platform/alertdb/main.tf>`__ module.
+
+Note that buckets and roles are already created in the RSP's Dev and Prod projects.
+
+It may be helpful to look at the PRs originally configured the Int environment:
+
+ - `#350 Add Kafka node pool to int science platform GKE <https://github.com/lsst/idf_deploy/pull/350>`__
+ - `#357 Fix typo in Kafka nodepool declaration <https://github.com/lsst/idf_deploy/pull/357>`__
+ - `#371 Add taints to the Kafka node pool on data-int <https://github.com/lsst/idf_deploy/pull/371>`__
+ - `#374 Add alert DB backend resources <https://github.com/lsst/idf_deploy/pull/373>`__
+ - `#374 Use bucket names which are more likely to be unique <https://github.com/lsst/idf_deploy/pull/374>`__:
+
+Configuring a new Phalanx deployment
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You'll need to configure a new Phalanx deployment.
+
+To do this, create a ``values-<environment>.yaml`` file in the services/alert-stream-broker directory of github.com/lsst-sqre/phalanx which matches the environment
+
 
 Deploying on a new Kubernetes cluster off of Google
 ---------------------------------------------------
