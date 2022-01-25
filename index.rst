@@ -645,6 +645,8 @@ Apply the change, as described in :ref:`deploying-a-change`.
 This may take a little while to apply, since it is handled through the asynchronous Kafka operator, which reconciles storage size every few minutes.
 When it starts reconciling, it rolls the change out gradually across the Kafka cluster to maintain availability.
 
+Note that storage sizes can only be increased, never decreased.
+
 Updating the alert schema
 -------------------------
 
