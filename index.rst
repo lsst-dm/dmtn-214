@@ -650,6 +650,164 @@ Note that storage sizes can only be increased, never decreased.
 Updating the alert schema
 -------------------------
 
+For background, read DMTN-210's section `3.4.4: Schema Synchronization Job <https://dmtn-210.lsst.io/#schema-synchronization-job>`__.
+
+The high-level steps are to commit your changes in the lsst/alert_packet repository, grab a reference to the automatically built lsst/alert_packet container, reference that release in the alert-stream-schema-registry chart, and then apply the change.
+Then, you'll update the simulator to generate simulated alerts which use the new alert packet version.
+
+Making a new alert schema
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+First, make a new subdirectory in github.com/lsst/alert_packet's `python/lsst/alert/packet/schema <https://github.com/lsst/alert_packet/tree/main/python/lsst/alert/packet/schema>`__ directory.
+For example, the current latest version as of this writing is 4.0, so there's a python/lsst/alert/packet/schema/4/0 directory which holds Avro schemas.
+You could put a new schema in python/lsst/alert/packet/schema/4/1.
+
+Start by copying the current schema into the new directory, and then make your changes.
+Then, update `python/lsst/alert/packet/schema/latest.txt <https://github.com/lsst/alert_packet/blob/main/python/lsst/alert/packet/schema/latest.txt>`__ to reference the new schema version number.
+
+Creating a container
+~~~~~~~~~~~~~~~~~~~~
+
+When you are satisfied with your changes, push them and open a PR.
+As long as your github branch starts with "tickets/" or is tagged, this will automatically kick off the "`build_sync_container <https://github.com/lsst/alert_packet/blob/main/.github/workflows/build_sync_container.yml>`__" GitHub Actions job, which will create a Docker container holding the alert schema.
+The container will be named ``lsstdm/lsst_alert_packet:<tag-or-branch-name>``; slashes are replaced with dashes in the tag-or-branch-name spot.
+
+For example, if you're working on a branch named tickets/DM-34567, then the container will be created and pushed to lsstdm/lsst_alert_packet:tickets-DM-34567.
+
+You can use this ticket-number-based container tag while doing development, but once you're sure of things, merge the PR and then tag a release.
+The release tag can be the version of the alert schema (for example "4.1") if you like - it doesn't really matter what value you pick; there are so many version numbers flying around with alert schemas that it's going to be hard to find any scheme which is ideal.
+
+To confirm that your container is working, you can run the conatiner locally.
+For example, for the "w.2022.04" tag:
+
+.. code-block:: sh
+
+    -> % docker run --rm lsstdm/lsst_alert_packet:w.2022.04 'syncLatestSchemaToRegistry.py --help'
+    usage: syncLatestSchemaToRegistry.py [-h]
+                                         [--schema-registry-url SCHEMA_REGISTRY_URL]
+                                         [--subject SUBJECT]
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      --schema-registry-url SCHEMA_REGISTRY_URL
+                            URL of a Schema Registry service
+      --subject SUBJECT     Schema Registry subject name to use
+
+Loading the new schema into the schema registry
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To load the new schema into the schema registry, update the ``alert-stream-schema-registry.schemaSync.image.tag`` value to the tag that you used for the container.
+
+The defaults are set in the alert-stream-schema-registry's `values.yaml <https://github.com/lsst-sqre/charts/blob/7db7ad7cacdf86cc42e5771621162a40f9dc12af/charts/alert-stream-schema-registry/values.yaml#L26-L30>`__ file.
+You can update the defaults, or you can update the parameters used in Phalanx for a particular environment under the `alert-stream-schema-registry <https://github.com/lsst-sqre/phalanx/blob/bb417e80e0d9d1148da6edccae400eec006576e1/services/alert-stream-broker/values-idfint.yaml#L75-L77>`__ field.
+
+Apply these changes as described in :ref:`deploying-a-change`.
+The result should be that a new schema is added to the schema registry.
+
+Once the change is deployed, the job that loads the schema will start.
+You can monitor it in the Argo UI by looking for the Job named 'sync-schema-job'.
+
+You can confirm it worked by using Kowl (see :ref:`running-kowl`) and using its UI for looking at the schema registry's contents.
+
+Publishing a new lsst-alert-packet Python package
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The alert stream simulator gets its version of the alert packet schema from the ``lsst-alert-packet`` Python package.
+The version of this package that it uses is set in `setup.py <https://github.com/lsst-dm/alert-stream-simulator/blob/main/setup.py#L9>`__ of github.com/alert-stream-simulator.
+
+You'll need to publish a new version of the lsst-alert-packet Python package in order to get a new version in alert-stream-simulator.
+
+Start by updating the version in `setup.cfg <https://github.com/lsst/alert_packet/blob/main/setup.cfg#L3>`__ of github.com/lsst/alert_packet.
+Merge your change which includes the new version in setup.cfg.
+
+The new version of the package needs to be published to PyPI, the Python Package Index: https://pypi.org/project/lsst-alert-packet/.
+It is managed by a user named 'lsst-alert-packet-admin', which has credentials stored in 1Password in the RSP-Vault vault.
+Use 1Password to get the credentials for that user.
+
+Once you have credentials and have incremented the version, you're ready to publish to PyPI.
+Explaining how to do that is out of scope of this guide, but `Twine <https://twine.readthedocs.io/en/stable/>`__ is a good tool for the job.
+
+Updating the Alert Stream Simulator package
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The alert stream simulator needs to use the new version of the ``lsst-alert-packet`` version which you published to PyPI.
+Second, the chart which runs the simulator needs to be updated to use the right ID of the schema in the schema registry.
+
+The version of ``lsst-alert-packet`` is set in the `setup.py <https://github.com/lsst-dm/alert-stream-simulator/blob/main/setup.py#L9>`__ file of github.com/alert-stream-simulator.
+Update this to include the newly-published Python package.
+
+Once you have made and merged a PR to this, tag a new release of the alert stream simulator using :command:`git tag`.
+When your tag has been pushed to the alert stream simulator GitHub repository, an automated build will create a container (in a manner almost exactly the same as you saw for lsst/alert_packet).
+
+You can use :command:`docker run` to verify that this worked.
+For example, for version ``v1.2.1``:
+
+.. code-block:: sh
+
+    -> % docker run --rm lsstdm/alert-stream-simulator:v1.2.1 'rubin-alert-sim -h'
+    usage: rubin-alert-sim [-h] [-v] [-d]
+                           {create-stream,play-stream,print-stream} ...
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -v, --verbose         enable info-level logging (default: False)
+      -d, --debug           enable debug-level logging (default: False)
+
+    subcommands:
+      {create-stream,play-stream,print-stream}
+        create-stream       create a stream dataset to be run through the
+                            simulation.
+        play-stream         play back a stream that has already been created
+        print-stream        print the size of messages in the stream in real time
+
+
+
+Getting the schema registry's ID
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Next, you'll need to get the ID that is used by the schema registry so that you can use it in the alert stream simulator deployment.
+This is easiest to retrieve using Kowl.
+
+Run Kowl (see :ref:`running-kowl`) and then navigate to http://localhost:8080/schema-registry/alert-packet.
+There should be a drop-down with different versions. You probably want the latest version, which might already be the one being displayed.
+Select the desired version.
+
+At the top of the screen, you should see the "Schema ID" of the schema you have selected.
+This integer is an ID we'll need to reference later.
+
+Updating the Alert Stream Simulator values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You're almost done.
+We need to update the alert stream simulator deployment to use the new container version, and to use the new schema ID.
+
+The container version is set in `values-idfint.yaml's alert-stream-simulator.image.tag <https://github.com/lsst-sqre/phalanx/blob/bb417e80e0d9d1148da6edccae400eec006576e1/services/alert-stream-broker/values-idfint.yaml#L85>`__ field.
+Update this to match the tag you used in github.com/lsst-dm/alert-stream-simulator.
+
+The schema ID is set in values-idfint.yaml as well, under ``alert-stream-simulator.schemaID``.
+This is set to ``1`` by default.
+
+Those changes to values-idfint.yaml are half the story.
+You probably also should update the defaults, which is done by editing the `values.yaml <https://github.com/lsst-sqre/charts/blob/aa8f4db9a8844d94407b492dac14b56014cecd02/charts/alert-stream-simulator/values.yaml>`__ files in the alert-stream-simulator chart.
+
+Once you have made those changes, apply them following the instructions in :ref:`deploying-a-change`.
+
+The new simulator make take a few minutes to come online as the data needs to be reloaded.
+Once the sync has completed, you can verify that the change worked.
+
+Verify that it worked using Kowl (see :ref:`running-kowl`) by looking at the `Messages UI <http://localhost:8080/topics/alerts-simulated?o=-3&p=-1&q&s=50#messages>`__ (keep in mind that it can take up to 37 seconds for messages to appear!).
+The mesages should be encoded using your new schema.
+
+.. warning::
+
+   You probably want to change the sample alert data (see :ref:`changing-sample-alert-data`) used by the alert stream simulator.
+
+   If you don't do this, then the alert packets will be decoded using the version used when sample alerts were generated, then *re-encoded* using the new alert schema.
+
+   You can manage this transition using Avro's `aliases <https://avro.apache.org/docs/current/spec.html#Aliases>`__, but it might be simpler to simultaneously switch to a new version of the sample alert data.
+
+.. _changing-sample-alert-data:
+
 Changing the sample alert data
 ------------------------------
 
