@@ -29,6 +29,8 @@ Most changes to the Alert Distribution System are done through Argo.
 There's some official `SQuARE-maintained documentation <https://phalanx.lsst.io/service-guide/sync-argo-cd.html>`__ for Argo.
 This section tries to summarize what you'd need to know to work with the Alert Distribution System, but that thorough documentation is worth reading too.
 
+.. _accessing-argo:
+
 Accessing Argo
 ~~~~~~~~~~~~~~
 
@@ -412,8 +414,49 @@ Administration
 Sharing passwords
 -----------------
 
+1. Log in to 1Password in the LSST IT account.
+2. Go to the "RSP-Vault" vault.
+3. Search for the username of the account you want to share.
+4. Click on the 3-dot menu in the top right and choose "Share...":
+
+   .. figure:: /_static/1password_sharing.png
+
+   This will open a new browser window for a sharing link.
+
+5. Set the duration and availability as desired, and click "Get Link to Share":
+
+   .. figure:: /_static/1password_sharing_link.png
+
+
+Share the link as you see fit.
+
+Shared links can also be revoked; see `1Password Documentation <https://support.1password.com/share-items/>`__ for more.
+
+
 Changing passwords
 ------------------
+
+1. Log in to 1Password in the LSST IT account.
+2. Go to the "RSP-Vault" vault.
+3. Search for the username of the account you want to modify.
+4. Click on the password field. Generate a new password and set it, and save your changes.
+5. Follow the instructions in `Phalanx: Updating a secret stored in 1Password and VaultSecret <https://phalanx.lsst.io/service-guide/update-a-onepassword-secret.html>`__.
+
+Then verify that the change was successful by checking it in Argo.
+
+1. Log in to Argo (see also :ref:`accessing_argo`).
+2. Navigate to the "alert-stream-broker" application.
+3. In the "filters" on the left side, search for your targeted username in the "Name" field.
+   You should see a filtered set of resources now.
+4. Click on the "secret" resource and check that it has an "updated" timestamp that is after you made your changes.
+   If not, delete the "Secret" resource; it will be automatically recreated quickly.
+   Once recreated, the user's password will be updated automatically.
+
+If this seems to be having trouble, consider checking:
+
+ - the Vault Secrets Operator logs to make sure it is updating secrets correctly
+ - the Strimzi Entity Operator logs to make sure they are updating user accounts correctly
+ - the Kafka broker logs to make sure it's healthy
 
 Adding a new user account
 -------------------------
