@@ -582,6 +582,7 @@ Then, sync the change to Gafaelfawr via Argo CD.
 Making Changes
 ==============
 
+.. _deploying-a-change:
 Deploying a change with Argo
 ----------------------------
 
@@ -602,8 +603,31 @@ In general, to make any change with ArgoCD, you update Helm charts, update Phala
 Updating the Kafka version
 --------------------------
 
+The Kafka version is set in the `alert-stream-broker/templates/kafka.yaml <https://github.com/lsst-sqre/charts/blob/0c2fe6c115623d7ae3852ab63b527a9fcd5d41bf/charts/alert-stream-broker/templates/kafka.yaml#L7>`__ file in github.com/lsst-sqre/charts.
+It is parameterized through the ``kafka.version`` value in the alert-stream-broker chart, which defaults to "2.8".
+
+When upgrading the Kafka version, you also may need to update the ``kafka.logMesageFormatVersion`` and ``kafka.interBrokerProtocolVersion``.
+These change slowly, but old values can be incompatible with new Kafka versions.
+See `Strimzi documentation on Kafka Versions <https://strimzi.io/docs/operators/latest/full/deploying.html#ref-kafka-versions-str>`__ to be sure.
+
+So, to update the version of Kafka used, update the `services/alert-stream-broker/values-idfint.yaml <https://github.com/lsst-sqre/phalanx/blob/master/services/alert-stream-broker/values-idfint.yaml>`__ file in github.com/lsst-sqre/phalanx.
+Under ``alert-stream-broker``, then under ``kafka``, add a value: ``version: <whatever you want>``.
+If necessary, also set ``logMessageFormatVersion`` and ``interBrokerProtocolVersion`` here.
+
+Then, follow the steps in :ref:`deploying-a-change` to apply these changes.
+
+See also: the Strimzi Documentation's "`9.5: Upgading Kafka <https://strimzi.io/docs/operators/latest/full/deploying.html#assembly-upgrading-kafka-versions-str>`__".
+
 Updating the Strimzi version
 ----------------------------
+
+First, you probably want to read the Strimzi Documentation's "`9. Upgrading Strimzi <https://strimzi.io/docs/operators/latest/full/deploying.html#assembly-upgrade-str>`__".
+
+The Strimzi version is governed by the version referenced in github.com/lsst-sqre/phalanx's `services/strimzi/Chart.yaml <https://github.com/lsst-sqre/phalanx/blob/master/services/strimzi/Chart.yaml#L9>`__ file.
+Update that version, and do anything else recommended by Strimzi in their documentation, such as changes to resources.
+
+Then, apply the change in a way similar to that described in :ref:`deploying-a-change`.
+Note though that you'll be synchronizing the 'strimzi' application in Argo, not the 'alert-stream-broker' application in Argo.
 
 Resizing Kafka broker disk storage
 ----------------------------------
