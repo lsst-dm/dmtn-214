@@ -516,6 +516,7 @@ Removing a user account
 Verify that the user was removed from Kafka by using Kowl and going to the "Access Control List" section (see :ref:`running-kowl`).
 The user shouldn't be in the ACLs anymore.
 
+.. _grant_access_to_topic:
 Granting users read-only access to a new topic
 ----------------------------------------------
 
@@ -533,14 +534,70 @@ There should be matching permissions with Resource=TOPIC, Permission=ALLOW, and 
 Adding a new Kafka topic
 ------------------------
 
+1. Add a new KafkaTopic resource to the ``templates`` directory in one of the charts that composes the alert-stream-broker service.
+   This will be in the github.com/lsst-sqre/charts repository.
+   For example, there is a KafkaTopic resource in the `alert-stream-simulator/templates/kafka-topics.yaml <https://github.com/lsst-sqre/charts/blob/0c2fe6c115623d7ae3852ab63b527a9fcd5d41bf/charts/alert-stream-simulator/templates/kafka-topics.yaml>`__ file.
+
+   These files use the Helm templating language.
+   See `The Chart Template Developer's Guide <https://helm.sh/docs/chart_template_guide/>`__ for more information on this language.
+
+   Strimzi's documentation (`"5.2.1: Kafka topic resource" <https://strimzi.io/docs/operators/latest/using.html#ref-operator-topic-str>`__) may be helpful in configuring the topic.
+   The schema for KafkaTopic resources has a complete reference at `11.2.90: KafkaTopic schema reference <https://strimzi.io/docs/operators/0.27.1/using.html#type-KafkaTopic-reference>`__.
+
+   Pick the chart that is most relevant to the topic you are adding.
+   If it is not relevant to any particular chart, use the general `alert-stream-broker <https://github.com/lsst-sqre/charts/tree/master/charts/alert-stream-broker>`__ chart.
+2. Increment the version of the chart by updating the ``version`` field of its Chart.yaml file.
+   For example, `this line <https://github.com/lsst-sqre/charts/blob/0c2fe6c115623d7ae3852ab63b527a9fcd5d41bf/charts/alert-stream-simulator/Chart.yaml#L3>`__ of the alert-stream-simulator chart.
+3. Make a pull request with your changes to github.com/lsst-sqre/charts, and make sure it passes automated checks, and get it reviewed.
+   Merge your PR.
+4. Next, you'll make a change to github.com/lsst-sqre/phalanx to reference the new chart which has the new KafkaTopic resource.
+   Update the `services/alert-stream-broker/Chart.yaml file <https://github.com/lsst-sqre/phalanx/blob/bb417e80e0d9d1148da6edccae400eec006576e1/services/alert-stream-broker/Chart.yaml>`__ to reference the new version number of the chart you have updated.
+   For example, `this line <https://github.com/lsst-sqre/phalanx/blob/bb417e80e0d9d1148da6edccae400eec006576e1/services/alert-stream-broker/Chart.yaml#L23>`__ would need to be updated if you were adding a topic to the alert-stream-simulator.
+5. Make a pull request with your changes to github.com/lsst-sqre/phalanx, and make sure it passes automated checks, and get it reviewd.
+   Merge your PR.
+6. Wait a few minutes (perhaps 10) for Argo to pick up the change to Phalanx.
+7. Log in to Argo CD.
+8. Navigate to the 'alert-stream-broker' application.
+9. Click 'sync' and leave all the defaults to sync your changes, creating the new topic.
+
+Verify that the change worked by using Kowl and going to the "Topics" section (see :ref:`running-kowl`).
+There should be a new topic created.
+
+To let users read from the topic, see :ref:`grant_access_to_topic`.
+
 Granting Alert DB access
 ------------------------
+
+Alert DB access is governed by membership in GitHub organizations and teams.
+
+The list of permitted GitHub groups for the IDF integration environment is in the `services/gafaelfawr/values-idfint.yaml <https://github.com/lsst-sqre/phalanx/blob/bb417e80e0d9d1148da6edccae400eec006576e1/services/gafaelfawr/values-idfint.yaml#L39-L41>`__ file in github.com/lsst-sqre/phalanx.
+
+As of this writing, that list is composed of 'lsst-sqre-square' and 'lsst-sqre-friends', so any users who wish to have access need to be added to the `"square" <https://github.com/orgs/lsst-sqre/teams/square>`__ or `"friends" <https://github.com/orgs/lsst-sqre/teams/friends>`__ teams in the lsst-sqre GitHub organization.
+
+Invite a user to join one of those groups to grant access.
+
+To change the set of permitted groups, modify the services/gafaelfawr/values-idfint.yaml file to change the list under the ``read:alertdb`` scope.
+Then, sync the change to Gafaelfawr via Argo CD.
 
 Making Changes
 ==============
 
 Deploying a change with Argo
 ----------------------------
+
+In general, to make any change with ArgoCD, you update Helm charts, update Phalanx, and then "sync" the alert-stream-application:
+
+1. Make desired changes to Helm charts, if required, in github.com/lsst-sqre/charts.
+   Note that any changes to Helm charts *always* require the version to be updated.
+2. Merge your Helm chart changes.
+3. Update the `services/alert-stream-broker/Chart.yaml file <https://github.com/lsst-sqre/phalanx/blob/bb417e80e0d9d1148da6edccae400eec006576e1/services/alert-stream-broker/Chart.yaml>`__ to reference the new version number of the chart you have updated, if you made any Helm chart changes.
+4. Update the `services/alert-stream-broker/values-idfint.yaml file <https://github.com/lsst-sqre/phalanx/blob/bb417e80e0d9d1148da6edccae400eec006576e1/services/alert-stream-broker/values-idfint.yaml>`__ to pass in any new template parameters, or make modifications to existing ones.
+5. Merge your Phalanx changes.
+6. Wait a few minutes (perhaps 10) for Argo to pick up the change to Phalanx.
+7. Log in to Argo CD at https://data-int.lsst.cloud/argo-cd.
+8. Navigate to the 'alert-stream-broker' application.
+9. Click 'sync' to synchronize your changes.
+
 
 Updating the Kafka version
 --------------------------
