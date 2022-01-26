@@ -463,6 +463,8 @@ If this seems to be having trouble, consider checking:
  - the Strimzi Entity Operator logs to make sure they are updating user accounts correctly
  - the Kafka broker logs to make sure it's healthy
 
+.. _new-user:
+
 Adding a new user account
 -------------------------
 
@@ -490,7 +492,7 @@ Second, add the user to the configuration for the cluster:
 
    Make sure you use the same username, and grant it read-only access to the ``alerts-simulated`` topic by setting ``readonlyTopics: ["alerts-simulated"]`` just like the other entries.
 
-   If more topcis should be available, add them.
+   If more topics should be available, add them.
    If running in a different environment than the IDF integration environment, modify the appropriate config file, not values-idfint.yaml.
 2. Make a pull request with your changes, and make sure it passes automated checks, and get it reviewed.
 3. Merge your PR. Wait a few minutes (perhaps 10) for Argo to pick up the change.
@@ -1066,6 +1068,34 @@ For example, here's ``values-idfint.yaml``:
               host: alert-stream-int-broker-2.lsst.cloud
 
 Apply this change as usual (see :ref:`deploying-a-change`).
+Now the broker *should* be accessible.
+
+Adding users
+~~~~~~~~~~~~
+
+Make new user credential sets in 1Password for the new targeted environment.
+See :ref:`new-user` for how to do this.
+
+In addition, make a user named 'kafka-admin' in 1Password in the same way.
+
+Make sure to use the right value for the ``environment`` field of the 1Password items.
+
+Then, set ``alert-stream-broker.vaultSecretsPath`` in ``values-<environment>.yaml`` to ``secret/k8s_oeprator/<environment>/alert-stream-broker``. This will configure the Vault Secrets Operator to correctly feed secrets through.
+
+Lingering issues
+~~~~~~~~~~~~~~~~
+
+You may need to re-sync several times to trigger the data-loading job of the alert stream simulator.
+When the system is in its half-broken state, this job will fail, and it can exponentially back-off which can take a very long time to recover.
+It can also hit a max retry limit and stop attempting to load data.
+
+Using Argo to "sync" will kick it off again, which may fix the problem.
+
+Testing connectivity
+~~~~~~~~~~~~~~~~~~~~
+
+You should now have a working cluster.
+You should be able to run Kowl with the new superuser identity and it ought to be able to connect.
 
 Deploying on a new Kubernetes cluster off of Google
 ---------------------------------------------------
