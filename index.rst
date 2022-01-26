@@ -960,13 +960,112 @@ It may be helpful to look at the PRs originally configured the Int environment:
  - `#374 Add alert DB backend resources <https://github.com/lsst/idf_deploy/pull/373>`__
  - `#374 Use bucket names which are more likely to be unique <https://github.com/lsst/idf_deploy/pull/374>`__:
 
+Provision the DNS for the schema registry
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+DNS is provisioned by the SQuARE team, so you'll have to make requests to them for this part.
+
+The target environment is running Gafaelfawr, so it has some base IP address used for the main ingress.
+The schema registry can run on the same IP address, even though it uses a different hostname.
+
+So, request a DNS A record which points to the base IP of the targeted environment's main ingress.
+
+For example, 'data-int.lsst.cloud', which is the base URL for the INT IDF environment, is an A record for '35.238.192.49'.
+The schema registry therefore gets a DNS A record 'alert-schemas-int.lsst.cloud' which similarly points to 35.238.192.49.
+
 Configuring a new Phalanx deployment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You'll need to configure a new Phalanx deployment.
 
-To do this, create a ``values-<environment>.yaml`` file in the services/alert-stream-broker directory of github.com/lsst-sqre/phalanx which matches the environment
+To do this, create a ``values-<environment>.yaml`` file in the `services/alert-stream-broker`_ directory of `github.com/lsst-sqre/phalanx`_ which matches the environment.
 
+You must explicitly set a hostname for the schema registry (in ``alert-stream-schema-registry.hostname`` and ``alert-database.ingester.schemaRegistryURL``).
+Use the one you provisioned in the previous step.
+
+
+You will also need to explicitly pass in the alert database GCP project and bucket names.
+Be careful to set the fields of the alert database to the right values that match what you created in Terraform.
+
+Finally, make sure to not set the ``alert-stream-broker.kafka.externalListener`` field yet.
+This field uses IPs and hostnames which we don't yet know.
+
+You will similarly need to configure the ``values-<environment>.yaml`` file for Strimzi (in services/strimzi) and for the Strimzi Registry Operator (in services/strimzi_registry_operator).
+
+You will also need to enable the ``alert_stream_broker``, ``strimzi``, and ``strimzi_registry_operator`` applications in the ``science-platform/values-<environment>.yaml`` file.
+For example, see the `science-platform/values-idfint.yaml <https://github.com/lsst-sqre/phalanx/blob/master/science-platform/values-idfint.yaml>`__ file, which has ``enabled: true`` for those three apllications.
+You need to do that for your target environment as well.
+
+Enabling the new services in Argo
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Argo needs to be synced - that is, *the Argo application itself* - in order to detect the newly-enabled ``alert_stream_broker``, ``strimzi``, and ``strimzi_registry_operator`` applications.
+Do that first - log in to Argo in the target environment, and sync the Argo application.
+
+Next, sync Strimzi.
+It should succeed without errors.
+
+Next, sync the Strimzi Registry Operator.
+It should also succeed without errors.
+
+Next, sync the alert stream broker application.
+**Errors are expected** at this stage.
+Our goal is just to do the initial setup so some of the resources come up, but not everything will work immediately.
+
+Provisioning DNS records
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Once the alert-stream-broker is synced into a half-broken, half-working state, we can start to get the IP addresses used by its services.
+This will let us provision more DNS records: those for the Kafka brokers.
+
+To do this, we will use :command:`kubectl` to look up the IP addresses provisioned for the broker (see :ref:`kubectl`).
+
+Run :command:`kubectl get service --namespace alert-stream-broker` to get a list of all the services running:
+
+.. code-block:: sh
+
+    -> % kubectl get service  -n alert-stream-broker
+    NAME                                    TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)                               AGE
+    alert-broker-kafka-0                    LoadBalancer   10.130.20.152   35.239.64.164    9094:31402/TCP                        78d
+    alert-broker-kafka-1                    LoadBalancer   10.130.23.65    34.122.165.155   9094:31828/TCP                        78d
+    alert-broker-kafka-2                    LoadBalancer   10.130.21.82    35.238.120.127   9094:31070/TCP                        78d
+    alert-broker-kafka-bootstrap            ClusterIP      10.130.20.156   <none>           9091/TCP,9092/TCP,9093/TCP            78d
+    alert-broker-kafka-brokers              ClusterIP      None            <none>           9090/TCP,9091/TCP,9092/TCP,9093/TCP   78d
+    alert-broker-kafka-external-bootstrap   LoadBalancer   10.130.16.127   35.188.169.31    9094:30118/TCP                        78d
+    alert-broker-zookeeper-client           ClusterIP      10.130.25.236   <none>           2181/TCP                              78d
+    alert-broker-zookeeper-nodes            ClusterIP      None            <none>           2181/TCP,2888/TCP,3888/TCP            78d
+    alert-schema-registry                   ClusterIP      10.130.27.137   <none>           8081/TCP                              76d
+    alert-stream-broker-alert-database      ClusterIP      10.130.27.41    <none>           3000/TCP                              21d
+
+The important column here is "EXTERNAL-IP."
+Use it to discover the IP addresses for each of the individual broker hosts, and for the "external-bootstrap" service.
+Request DNS A records that map useful hostnames to these IP addresses - this is done by the SQuARE team, so you'll need help.
+
+Once you have DNS provisioned, make another change to ``values-<environment>.yaml`` to lock in the IP addresses and inform Kafka of the hostnames to use.
+For example, here's ``values-idfint.yaml``:
+
+.. code-block::
+
+    alert-stream-broker:
+      cluster:
+        name: "alert-broker"
+
+      kafka:
+        # Addresses based on the state as of 2021-12-02; these were assigned by
+        # Google and now we're pinning them.
+        externalListener:
+          bootstrap:
+            ip: 35.188.169.31
+            host: alert-stream-int.lsst.cloud
+          brokers:
+            - ip: 35.239.64.164
+              host: alert-stream-int-broker-0.lsst.cloud
+            - ip: 34.122.165.155
+              host: alert-stream-int-broker-1.lsst.cloud
+            - ip: 35.238.120.127
+              host: alert-stream-int-broker-2.lsst.cloud
+
+Apply this change as usual (see :ref:`deploying-a-change`).
 
 Deploying on a new Kubernetes cluster off of Google
 ---------------------------------------------------
