@@ -71,7 +71,6 @@ You might want to refresh a few times and make sure that the Git reference liste
 
 .. _Phalanx repository: https://github.com/lsst-sqre/phalanx
 .. _Charts repository: https://github.com/lsst-sqre/charts
-.. _services/alert-stream-broker: https://github.com/lsst-sqre/phalanx/tree/master/services/alert-stream-broker
 
 1Password
 ---------
@@ -98,7 +97,7 @@ Terraform
 ---------
 
 Terraform is a tool for managing resources stored in Google Cloud through code.
-The IDF deployment of the alert distribution system uses the `idf_deploy repository <https://github.com/lsst/idf_deploy>`__ for its Terraform configuration.
+The IDF deployment of the alert distribution system uses the `github.com/lsst/idf_deploy`_ for its Terraform configuration.
 
 That repository hosts documentation directly in its README.
 Changes are made entirely through GitHub Actions workflows, so they get applied simply by merging into the main branch.
@@ -486,7 +485,7 @@ First, generate new credentials for the user:
 
 Second, add the user to the configuration for the cluster:
 
-1. Make a change to github.com/lsst-sqre/phalanx's services/alert-stream-broker/values-idfint.yaml file.
+1. Make a change to `github.com/lsst-sqre/phalanx`_'s services/alert-stream-broker/values-idfint.yaml file.
    Add the new user to the list of users under ``alert-stream-broker.users``: https://github.com/lsst-sqre/phalanx/blob/bb417e80e0d9d1148da6edccae400eec006576e1/services/alert-stream-broker/values-idfint.yaml#L33-L73
 
    Make sure you use the same username, and grant it read-only access to the ``alerts-simulated`` topic by setting ``readonlyTopics: ["alerts-simulated"]`` just like the other entries.
@@ -508,7 +507,7 @@ Optionally verify that access works using a method similar to that in :ref:`conn
 Removing a user account
 -----------------------
 
-1. Delete the user from the list in github.com/lsst-sqre/phalanx's services/alert-stream-broker/values-idfint.yaml file.
+1. Delete the user from the list in `github.com/lsst-sqre/phalanx`_'s `services/alert-stream-broker/values-idfint.yaml`_ file.
 2. Make a pull request with this change, and make sure it passes automated checks, and get it reviewed.
 3. Merge your PR.
 4. Delete the user's credentials from 1Password in the RSP-Vault vault of the LSST IT account.
@@ -525,7 +524,7 @@ The user shouldn't be in the ACLs anymore.
 Granting users read-only access to a new topic
 ----------------------------------------------
 
-1. Make a change to github.com/lsst-sqre/phalanx's services/alert-stream-broker/values-idfint.yaml file.
+1. Make a change to `github.com/lsst-sqre/phalanx`_'s `services/alert-stream-broker/values-idfint.yaml`_ file.
    In the list of users under ``alert-stream-broker.users``, add the new topic to the ``readonlyTopics`` list for each user that should have access.
 2. Make a pull request with your changes, and make sure it passes automated checks, and get it reviewed.
 3. Merge your PR. Wait a few minutes (perhaps 10) for Argo to pick up the change.
@@ -540,7 +539,7 @@ Adding a new Kafka topic
 ------------------------
 
 1. Add a new KafkaTopic resource to the ``templates`` directory in one of the charts that composes the alert-stream-broker service.
-   This will be in the github.com/lsst-sqre/charts repository.
+   This will be in the `github.com/lsst-sqre/charts`_ repository.
    For example, there is a KafkaTopic resource in the `alert-stream-simulator/templates/kafka-topics.yaml <https://github.com/lsst-sqre/charts/blob/0c2fe6c115623d7ae3852ab63b527a9fcd5d41bf/charts/alert-stream-simulator/templates/kafka-topics.yaml>`__ file.
 
    These files use the Helm templating language.
@@ -550,13 +549,13 @@ Adding a new Kafka topic
    The schema for KafkaTopic resources has a complete reference at `11.2.90: KafkaTopic schema reference <https://strimzi.io/docs/operators/0.27.1/using.html#type-KafkaTopic-reference>`__.
 
    Pick the chart that is most relevant to the topic you are adding.
-   If it is not relevant to any particular chart, use the general `alert-stream-broker <https://github.com/lsst-sqre/charts/tree/master/charts/alert-stream-broker>`__ chart.
+   If it is not relevant to any particular chart, use the general `charts/alert-stream-broker`_ chart.
 2. Increment the version of the chart by updating the ``version`` field of its Chart.yaml file.
    For example, `this line <https://github.com/lsst-sqre/charts/blob/0c2fe6c115623d7ae3852ab63b527a9fcd5d41bf/charts/alert-stream-simulator/Chart.yaml#L3>`__ of the alert-stream-simulator chart.
-3. Make a pull request with your changes to github.com/lsst-sqre/charts, and make sure it passes automated checks, and get it reviewed.
+3. Make a pull request with your changes to `github.com/lsst-sqre/charts`_, and make sure it passes automated checks, and get it reviewed.
    Merge your PR.
-4. Next, you'll make a change to github.com/lsst-sqre/phalanx to reference the new chart which has the new KafkaTopic resource.
-   Update the `services/alert-stream-broker/Chart.yaml file <https://github.com/lsst-sqre/phalanx/blob/bb417e80e0d9d1148da6edccae400eec006576e1/services/alert-stream-broker/Chart.yaml>`__ to reference the new version number of the chart you have updated.
+4. Next, you'll make a change to `github.com/lsst-sqre/phalanx`_ to reference the new chart which has the new KafkaTopic resource.
+   Update the `services/alert-stream-broker/Chart.yaml`_ file to reference the new version number of the chart you have updated.
    For example, `this line <https://github.com/lsst-sqre/phalanx/blob/bb417e80e0d9d1148da6edccae400eec006576e1/services/alert-stream-broker/Chart.yaml#L23>`__ would need to be updated if you were adding a topic to the alert-stream-simulator.
 5. Make a pull request with your changes to github.com/lsst-sqre/phalanx, and make sure it passes automated checks, and get it reviewd.
    Merge your PR.
@@ -594,11 +593,11 @@ Deploying a change with Argo
 
 In general, to make any change with ArgoCD, you update Helm charts, update Phalanx, and then "sync" the alert-stream-application:
 
-1. Make desired changes to Helm charts, if required, in github.com/lsst-sqre/charts.
+1. Make desired changes to Helm charts, if required, in `github.com/lsst-sqre/charts`_.
    Note that any changes to Helm charts *always* require the version to be updated.
 2. Merge your Helm chart changes.
-3. Update the `services/alert-stream-broker/Chart.yaml file <https://github.com/lsst-sqre/phalanx/blob/bb417e80e0d9d1148da6edccae400eec006576e1/services/alert-stream-broker/Chart.yaml>`__ to reference the new version number of the chart you have updated, if you made any Helm chart changes.
-4. Update the `services/alert-stream-broker/values-idfint.yaml file <https://github.com/lsst-sqre/phalanx/blob/bb417e80e0d9d1148da6edccae400eec006576e1/services/alert-stream-broker/values-idfint.yaml>`__ to pass in any new template parameters, or make modifications to existing ones.
+3. Update the `services/alert-stream-broker/Chart.yaml`_ file to reference the new version number of the chart you have updated, if you made any Helm chart changes.
+4. Update the `services/alert-stream-broker/values-idfint.yaml`_ file to pass in any new template parameters, or make modifications to existing ones.
 5. Merge your Phalanx changes.
 6. Wait a few minutes (perhaps 10) for Argo to pick up the change to Phalanx.
 7. Log in to Argo CD at https://data-int.lsst.cloud/argo-cd.
@@ -609,14 +608,14 @@ In general, to make any change with ArgoCD, you update Helm charts, update Phala
 Updating the Kafka version
 --------------------------
 
-The Kafka version is set in the `alert-stream-broker/templates/kafka.yaml <https://github.com/lsst-sqre/charts/blob/0c2fe6c115623d7ae3852ab63b527a9fcd5d41bf/charts/alert-stream-broker/templates/kafka.yaml#L7>`__ file in github.com/lsst-sqre/charts.
+The Kafka version is set in the `alert-stream-broker/templates/kafka.yaml <https://github.com/lsst-sqre/charts/blob/0c2fe6c115623d7ae3852ab63b527a9fcd5d41bf/charts/alert-stream-broker/templates/kafka.yaml#L7>`__ file in `github.com/lsst-sqre/charts`_.
 It is parameterized through the ``kafka.version`` value in the alert-stream-broker chart, which defaults to "2.8".
 
 When upgrading the Kafka version, you also may need to update the ``kafka.logMesageFormatVersion`` and ``kafka.interBrokerProtocolVersion``.
 These change slowly, but old values can be incompatible with new Kafka versions.
 See `Strimzi documentation on Kafka Versions <https://strimzi.io/docs/operators/latest/full/deploying.html#ref-kafka-versions-str>`__ to be sure.
 
-So, to update the version of Kafka used, update the `services/alert-stream-broker/values-idfint.yaml <https://github.com/lsst-sqre/phalanx/blob/master/services/alert-stream-broker/values-idfint.yaml>`__ file in github.com/lsst-sqre/phalanx.
+So, to update the version of Kafka used, update the `services/alert-stream-broker/values-idfint.yaml <https://github.com/lsst-sqre/phalanx/blob/master/services/alert-stream-broker/values-idfint.yaml>`__ file in `github.com/lsst-sqre/phalanx`_.
 Under ``alert-stream-broker``, then under ``kafka``, add a value: ``version: <whatever you want>``.
 If necessary, also set ``logMessageFormatVersion`` and ``interBrokerProtocolVersion`` here.
 
@@ -629,7 +628,7 @@ Updating the Strimzi version
 
 First, you probably want to read the Strimzi Documentation's "`9. Upgrading Strimzi <https://strimzi.io/docs/operators/latest/full/deploying.html#assembly-upgrade-str>`__".
 
-The Strimzi version is governed by the version referenced in github.com/lsst-sqre/phalanx's `services/strimzi/Chart.yaml <https://github.com/lsst-sqre/phalanx/blob/master/services/strimzi/Chart.yaml#L9>`__ file.
+The Strimzi version is governed by the version referenced in `github.com/lsst-sqre/phalanx`_'s `services/strimzi/Chart.yaml <https://github.com/lsst-sqre/phalanx/blob/master/services/strimzi/Chart.yaml#L9>`__ file.
 Update that version, and do anything else recommended by Strimzi in their documentation, such as changes to resources.
 
 Then, apply the change in a way similar to that described in :ref:`deploying-a-change`.
@@ -643,7 +642,7 @@ Some reference reading:
  - DMTN-210's section `3.2.1.3: Storage <https://dmtn-210.lsst.io/#storage>`__.
  - "`Persistent storage improvements <https://strimzi.io/blog/2019/07/08/persistent-storage-improvements/>`__"
 
-Change the alert-stream-broker.kafka.storage.size value in `services/alert-stream-broker/values-idfint.yaml <https://github.com/lsst-sqre/phalanx/blob/master/services/alert-stream-broker/values-idfint.yaml#L20>`__ in github.com/lsst-sqre/phalanx.
+Change the alert-stream-broker.kafka.storage.size value in `services/alert-stream-broker/values-idfint.yaml`_ in `github.com/lsst-sqre/phalanx`_.
 This is the amount of disk space *per broker instance*.
 
 Apply the change, as described in :ref:`deploying-a-change`.
@@ -669,7 +668,7 @@ The high-level steps are to:
 Making a new alert schema
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-First, make a new subdirectory in github.com/lsst/alert_packet's `python/lsst/alert/packet/schema <https://github.com/lsst/alert_packet/tree/main/python/lsst/alert/packet/schema>`__ directory.
+First, make a new subdirectory in `github.com/lsst/alert_packet`_'s `python/lsst/alert/packet/schema <https://github.com/lsst/alert_packet/tree/main/python/lsst/alert/packet/schema>`__ directory.
 For example, the current latest version as of this writing is 4.0, so there's a python/lsst/alert/packet/schema/4/0 directory which holds Avro schemas.
 You could put a new schema in python/lsst/alert/packet/schema/4/1.
 
@@ -724,11 +723,11 @@ Publishing a new lsst-alert-packet Python package
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The alert stream simulator gets its version of the alert packet schema from the ``lsst-alert-packet`` Python package.
-The version of this package that it uses is set in `setup.py <https://github.com/lsst-dm/alert-stream-simulator/blob/main/setup.py#L9>`__ of github.com/alert-stream-simulator.
+The version of this package that it uses is set in `setup.py <https://github.com/lsst-dm/alert-stream-simulator/blob/main/setup.py#L9>`__ of `github.com/lsst-dm/alert-stream-simulator`_.
 
 You'll need to publish a new version of the lsst-alert-packet Python package in order to get a new version in alert-stream-simulator.
 
-Start by updating the version in `setup.cfg <https://github.com/lsst/alert_packet/blob/main/setup.cfg#L3>`__ of github.com/lsst/alert_packet.
+Start by updating the version in `setup.cfg <https://github.com/lsst/alert_packet/blob/main/setup.cfg#L3>`__ of `github.com/lsst/alert_packet`_.
 Merge your change which includes the new version in setup.cfg.
 
 The new version of the package needs to be published to PyPI, the Python Package Index: https://pypi.org/project/lsst-alert-packet/.
@@ -744,7 +743,7 @@ Updating the Alert Stream Simulator package
 The alert stream simulator needs to use the new version of the ``lsst-alert-packet`` version which you published to PyPI.
 Second, the chart which runs the simulator needs to be updated to use the right ID of the schema in the schema registry.
 
-The version of ``lsst-alert-packet`` is set in the `setup.py <https://github.com/lsst-dm/alert-stream-simulator/blob/main/setup.py#L9>`__ file of github.com/alert-stream-simulator.
+The version of ``lsst-alert-packet`` is set in the `setup.py <https://github.com/lsst-dm/alert-stream-simulator/blob/main/setup.py#L9>`__ file of `github.com/lsst-dm/alert-stream-simulator`_.
 Update this to include the newly-published Python package.
 
 Once you have made and merged a PR to this, tag a new release of the alert stream simulator using :command:`git tag`.
@@ -995,6 +994,17 @@ Troubleshooting
 
 Dealing with a full disk
 ------------------------
+
+
+.. _github.com/lsst-sqre/phalanx: https://github.com/lsst-sqre/phalanx
+.. _github.com/lsst-sqre/charts: https://github.com/lsst-sqre/charts
+.. _github.com/lsst/idf_deploy: https://github.com/lsst/idf_deploy
+.. _github.com/lsst/alert_packet: https://github.com/lsst/alert_packet
+.. _github.com/lsst-dm/alert-stream-simulator: https://github.com/lsst-dm/alert-stream-simulator
+.. _services/alert-stream-broker: https://github.com/lsst-sqre/phalanx/tree/master/services/alert-stream-broker
+.. _services/alert-stream-broker/Chart.yaml: https://github.com/lsst-sqre/phalanx/tree/master/services/alert-stream-broker/values-idfint.yaml
+.. _services/alert-stream-broker/values-idfint.yaml: https://github.com/lsst-sqre/phalanx/tree/master/services/alert-stream-broker/values-idfint.yaml
+.. _charts/alert-stream-broker: https://github.com/lsst-sqre/charts/tree/master/charts/alert-stream-broker>
 
 .. rubric:: References
 
