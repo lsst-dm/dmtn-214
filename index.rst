@@ -962,6 +962,8 @@ It may be helpful to look at the PRs originally configured the Int environment:
  - `#374 Add alert DB backend resources <https://github.com/lsst/idf_deploy/pull/373>`__
  - `#374 Use bucket names which are more likely to be unique <https://github.com/lsst/idf_deploy/pull/374>`__:
 
+.. _schema-registry-dns:
+
 Provision the DNS for the schema registry
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1013,6 +1015,8 @@ It should also succeed without errors.
 Next, sync the alert stream broker application.
 **Errors are expected** at this stage.
 Our goal is just to do the initial setup so some of the resources come up, but not everything will work immediately.
+
+.. _broker-dns:
 
 Provisioning DNS records
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1100,40 +1104,95 @@ You should be able to run Kowl with the new superuser identity and it ought to b
 Deploying on a new Kubernetes cluster off of Google
 ---------------------------------------------------
 
+Deploying to a new Kubernetes cluster off of Google will require all the same steps as described in the previous section, but with a few additional wrinkles.
+
+First, the alert-stream-broker chart uses the "load balancer" service type to provide external internet access to the Kafka nodes.
+Load balancer services are very platform-specific; on Google it corresponds to creation of TCP Load Balancers.
+On a non-Google platform, it might work very differently.
+
+One option would be to use the targeted platform's load balancers.
+Another option is to use Node Ports or Ingresses instead.
+The 5-part Strimzi blog post series "`Accessing Kafka <https://strimzi.io/blog/2019/04/17/accessing-kafka-part-1/>`__" goes into detail about these options.
+
+Second, the alert database uses Google Cloud Storage buckets to store raw alert and schema data.
+This would need to be replaced with something appropriate for the targeted environment.
+The requirements are made clear in the ``storage.py`` files of the `github.com/lsst-dm/alert_database_ingester`_ and `github.com/alert_database_server`_ repositories.
+An implementation would need to fulfill the abstract interface provided in that file.
+
+There may be more requirements, but these are certainly to need investigation if you're planning to move to a different Kubernetes provider.
+
 Changing the schema registry hostname
 -------------------------------------
+
+The Schema Registry's hostname is controlled by the 'hostname' value passed in to `charts/alert-stream-schema-registry`_.
+Updating that will update the hostname expected by the service.
+
+In addition, a new DNS record will need to be created by whoever is provisioning DNS for the target environment.
+For the INT IDF environment, that's SQuARE.
+It should route the new hostname to the ingress IP address.
+
+Finally, the new schema registry needs to be passed in to the alert database in its ``ingester.schemaRegistryURL`` value.
+
+See also: :ref:`schema-registry-dns`.
 
 Changing the Kafka broker hostnames
 -----------------------------------
 
+Kafka broker hostnames can be changed by modifying the values passed in to  `charts/alert-stream-broker`_.
+Once changed, the broker will not work until DNS records are also updated.
+
+See also: :ref:`broker-dns`.
+
 Changing the alert database URL
 -------------------------------
+
+The alert database's URL is based off of that of the cluster's main Gafaelfawr ingress, so it cannot be changed entirely.
+However, it uses a path prefix, which *can* be changed.
+This path prefix is controlled by a value passed in to the alert database chart.
 
 Changing the Kafka hardware
 ---------------------------
 
-Changing the alert database retention policy
---------------------------------------------
+To change the hardware used by Kafka, change the nodes used in the node pool.
+This is set in the terraform configuration in `environment/deployments/science-platform/env/integration-gke.tfvars <https://github.com/lsst/idf_deploy/blob/main/environment/deployments/science-platform/env/integration-gke.tfvars#L48-L64>`__:
 
-Changing the alert database backing storage buckets
----------------------------------------------------
+.. code-block:: terraform
 
-Troubleshooting
-===============
+  {
+    name = "kafka-pool"
+    machine_type = "n2-standard-32"
+    node_locations     = "us-central1-b"
+    local_ssd_count    = 0
+    auto_repair        = true
+    auto_upgrade       = true
+    preemptible        = false
+    image_type         = "cos_containerd"
+    enable_secure_boot = true
+    disk_size_gb       = "500"
+    disk_type          = "pd-standard"
+    autoscaling        = true
+    initial_node_count = 1
+    min_count          = 1
+    max_count          = 10
+  }
 
-Dealing with a full disk
-------------------------
 
+Change this, and apply the terraform change.
+
+This may cause some downtime as the kafka nodes are terminated and replaced with new ones, evicting the Kafka brokers, but this isn't known for certain.
 
 .. _github.com/lsst-sqre/phalanx: https://github.com/lsst-sqre/phalanx
 .. _github.com/lsst-sqre/charts: https://github.com/lsst-sqre/charts
 .. _github.com/lsst/idf_deploy: https://github.com/lsst/idf_deploy
 .. _github.com/lsst/alert_packet: https://github.com/lsst/alert_packet
 .. _github.com/lsst-dm/alert-stream-simulator: https://github.com/lsst-dm/alert-stream-simulator
+.. _github.com/lsst-dm/alert_database_ingester: https://github.com/lsst-dm/alert_database_ingester
+.. _github.com/lsst-dm/alert_database_server: https://github.com/lsst-dm/alert_database_server
 .. _services/alert-stream-broker: https://github.com/lsst-sqre/phalanx/tree/master/services/alert-stream-broker
 .. _services/alert-stream-broker/Chart.yaml: https://github.com/lsst-sqre/phalanx/tree/master/services/alert-stream-broker/values-idfint.yaml
 .. _services/alert-stream-broker/values-idfint.yaml: https://github.com/lsst-sqre/phalanx/tree/master/services/alert-stream-broker/values-idfint.yaml
 .. _charts/alert-stream-broker: https://github.com/lsst-sqre/charts/tree/master/charts/alert-stream-broker>
+.. _charts/alert-stream-schema-registry: https://github.com/lsst-sqre/charts/tree/master/charts/alert-stream-schema-registry>
 
 .. rubric:: References
 
