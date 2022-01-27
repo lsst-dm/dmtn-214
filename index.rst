@@ -3,19 +3,14 @@
 
 :tocdepth: 1
 
-.. Please do not modify tocdepth; will be fixed when a new Sphinx theme is shipped.
-
 .. sectnum::
-
-.. TODO: Delete the note below before merging new content to the main branch.
 
 .. note::
 
-   **This technote is not yet published.**
-
    This is a practical collection of instructions, troubleshooting tips, and playbooks for managing and maintaining the Alert Distribution System.
 
-.. Add content here.
+This is a collection of instructions for how to operate the Alert Distribution System.
+An overview of the system is provided in DMTN-210 :cite:`DMTN-210` which is essential background reading for this document.
 
 Basic Tools
 ===========
