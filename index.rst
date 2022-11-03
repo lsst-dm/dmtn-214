@@ -74,8 +74,8 @@ You might want to refresh a few times and make sure that the Git reference liste
 LSST IT uses it to distribute passwords, and the SQuARE team has adapted it for managing secrets stored in Kubernetes.
 
 It's worth reading the documentation in Phalanx on this subject:
- - `Add a secret with 1Password and VaultSecret <https://phalanx.lsst.io/service-guide/add-a-onepassword-secret.html>`__
- - `Updating a secret stored in 1Password and VaultSecret <https://phalanx.lsst.io/service-guide/update-a-onepassword-secret.html>`__
+ - `Add a secret with 1Password and VaultSecret <https://phalanx.lsst.io/developers/add-a-onepassword-secret.html>`__
+ - `Updating a secret stored in 1Password and VaultSecret <https://phalanx.lsst.io/developers/update-a-onepassword-secret.html>`__
 
 Managing the Alert Distribution System requires 1Password access.
 The LSST IT team can grant that access.
