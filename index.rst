@@ -21,7 +21,7 @@ ArgoCD
 Argo CD :cite:`argo-cd-homepage` is a tool for deploying software onto a Kubernetes cluster.
 Most changes to the Alert Distribution System are done through Argo.
 
-There's some official `SQuARE-maintained documentation <https://phalanx.lsst.io/service-guide/sync-argo-cd.html>`__ for Argo.
+There's some official `SQuARE-maintained documentation <https://phalanx.lsst.io/applications/argo-cd/index.html>`__ for Argo.
 This section tries to summarize what you'd need to know to work with the Alert Distribution System, but that thorough documentation is worth reading too.
 
 .. _accessing-argo:
@@ -29,7 +29,7 @@ This section tries to summarize what you'd need to know to work with the Alert D
 Accessing Argo
 ~~~~~~~~~~~~~~
 
-The integration deployment uses the Argo installation at `https://data-int.lsst.cloud/argo-cd <https://data-int.lsst.cloud/argo-cd>`__
+The integration deployment uses the Argo installation at `https://data-int.lsst.cloud/argo-cd <https://data-int.lsst.cloud/argo-cd>`__.
 Access to that installation is managed by the SQuARE team.
 
 When you go to the Argo UI for the first time, you'll see a big mess of many "applications."
@@ -49,23 +49,52 @@ When "prune" is enabled, Argo will delete any orphaned resources that no longer 
 Without this option, they will linger around.
 They probably won't cause harm, but this can be confusing.
 
+Additionally, some resources may not update properly if they
+depend on updates in other applications. These may require you to delete that specific resources and then re-deploy.
+
+The recommended deployment order for easy troubleshooting is:
+
+.. code-block::
+
+        1. Deploy Kafka Cluster
+        2. Deploy strimzi registry operator
+        3. Deploy the schema registry
+        4. Deploy the ingress schema for the schema registry
+        5. Deploy other services
+
+
+If, during deployment, any resource begins to error continuously, you can delete that specific resource while troubleshooting.
+This prevents the status channel from being continuously spammed with errors.
+It is recommended to grab the error log first from the logs tab first before deleting the resources.
+
+If for some reason the instance of alert-stream-broker has been removed from the active applications, you can re-deploy it by going to
+https://data-int.lsst.cloud/argo-cd/applications/argocd/science-platform?view=tree&resource=  and re-syncing alert-stream0-broker.
+
+If the Kafka-pods have been redeployed from scratch, their
+
 What is "Desired State" in Argo?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The "desired state" of a service is based on whatever is currently in the master branch of the `Phalanx repository`_.
-Each application has a matching *service* in the Phalanx repo - for example, `services/alert-stream-broker`_ - which contains a ``Chart.yaml`` file and a ``values-idfint.yaml`` file (and possibly more ``values-*.yaml`` files if the service is deployed to more environments than just the IDF integration environment).
+Each application has a matching *service* in the Phalanx repo - for example, `services/alert-stream-broker`_ - which contains a ``Chart.yaml`` file,
+a charts directory containing several charts the broker depends on, and a ``values-idfint.yaml`` file (and possibly more ``values-*.yaml`` files if the service is deployed to more environments than just the IDF integration environment).
 
 The ``Chart.yaml`` file lists Helm charts - and, very crucially, their versions - that define the actual configuration to be used.
 The ``values`` file(s) list the particular configuration values that should be plugged in to the Helm chart templates used by that service.
+the ``values.yaml`` file should only contain information that is agnostic to which environment the s.
 
-Most of the sourced Helm charts are found in the `Charts repository`_.
+Most of the sourced Helm charts are found in the `Charts directory of alert-stream-broker`_.
 The specific charts used are described in more complete detail in DMTN-210. :cite:`DMTN-210`
 
 Argo is sometimes a little bit delayed from the state of the Phalanx repository, perhaps by a few minutes.
 You might want to refresh a few times and make sure that the Git reference listed under "Current Sync Status" on the Argo UI for an application matches what you expect to apply.
 
 .. _Phalanx repository: https://github.com/lsst-sqre/phalanx
-.. _Charts repository: https://github.com/lsst-sqre/charts
+.. _Charts directory of alert-stream-broker: https://github.com/lsst-sqre/phalanx/tree/master/services/alert-stream-broker/charts
+
+For troubleshooting: Changes to the strimzi-operator may cause the alert-schema-registry to not fully deploy.
+
+
 
 1Password
 ---------
@@ -122,7 +151,7 @@ Then, here's how to run it locally:
 
    KAFKA_PASSWORD="..."  # fill this in
 
-   docker run --network=host \
+   docker run \
        -p 8080:8080 \
        -e KAFKA_BROKERS=alert-stream-int.lsst.cloud:9094 \
        -e KAFKA_TLS_ENABLED=true \
@@ -162,6 +191,9 @@ For example, here we can see the Pitt-Google broker:
 Kowl has many more capabilities.
 See the official Kowl documentation :cite:`kowl` for more.
 
+Note: Do note use --network=host, as the current behavior doesn't allow docker to publish
+port 8080 and you won't be able to access the Kowl through the local host.
+
 Tool Setup
 ==========
 
@@ -169,6 +201,9 @@ Tool Setup
 
 Getting ``kubectl`` Access
 --------------------------
+
+While the below instructions are still valid, it is now no longer recommended to use kubectl and instead do everything
+in the Google Cloud web interface.
 
 1. Install ``kubectl``: https://kubernetes.io/docs/tasks/tools/
 2. Install ``gcloud``: https://cloud.google.com/sdk/docs/install
@@ -189,14 +224,15 @@ Running Kowl
 ------------
 
 0. Make sure you have :command:`docker` installed.
-1. Retrieve Kafka superuser credentials, as described in :ref:`superuser-creds`.
-2. Run the following:
+1. Make sure the Docker daemon is running. If using Docker Desktop start up the application.
+2. Retrieve Kafka superuser credentials, as described in :ref:`superuser-creds`.
+3. Run the following:
 
    .. code-block:: sh
 
      KAFKA_PASSWORD="..."  # fill this in
 
-     docker run --network=host \
+     docker run \
        -p 8080:8080 \
        -e KAFKA_BROKERS=alert-stream-int.lsst.cloud:9094 \
        -e KAFKA_TLS_ENABLED=true \
@@ -537,7 +573,7 @@ Adding a new Kafka topic
 
 1. Add a new KafkaTopic resource to the ``templates`` directory in one of the charts that composes the alert-stream-broker service.
    This will be in the `github.com/lsst-sqre/charts`_ repository.
-   For example, there is a KafkaTopic resource in the `alert-stream-simulator/templates/kafka-topics.yaml <https://github.com/lsst-sqre/charts/blob/0c2fe6c115623d7ae3852ab63b527a9fcd5d41bf/charts/alert-stream-simulator/templates/kafka-topics.yaml>`__ file.
+   For example, there is a KafkaTopic resource in the `alert-stream-simulator/templates/kafka-topics.yaml <https://github.com/lsst-sqre/phalanx/blob/master/services/alert-stream-broker/charts/alert-stream-simulator/templates/kafka-topics.yaml>`__ file.
 
    These files use the Helm templating language.
    See `The Chart Template Developer's Guide <https://helm.sh/docs/chart_template_guide/>`__ for more information on this language.
@@ -1019,7 +1055,48 @@ Provisioning DNS records
 Once the alert-stream-broker is synced into a half-broken, half-working state, we can start to get the IP addresses used by its services.
 This will let us provision more DNS records: those for the Kafka brokers.
 
-To do this, we will use :command:`kubectl` to look up the IP addresses provisioned for the broker (see :ref:`kubectl`).
+In  the current gcloud setup, this must be done through Square. If you cannot use the existing static IPs, you must
+request that you are assigned three for the Kafka brokers, and that the DNS records are updated to point to the correct
+static IPs.
+
+You will then need to update ``values-idfint.yaml``:
+
+.. code-block::
+
+    alert-stream-broker:
+      cluster:
+        name: "alert-broker"
+
+      kafka:
+        # Addresses based on the state as of 2022-11-06; these were assigned by
+        # Square and now we're pinning them.
+        externalListener:
+          tls:
+            enabled: true
+          bootstrap:
+            ip: 35.224.176.103
+            host: alert-stream-int.lsst.cloud
+          brokers:
+            - ip: "34.28.80.188"
+            host: alert-stream-int-broker-0.lsst.cloud
+            - ip: "35.188.136.140"
+            host: alert-stream-int-broker-1.lsst.cloud
+            - ip: "35.238.84.221"
+            host: alert-stream-int-broker-2.lsst.cloud
+
+
+
+The Kafka brokers MUST point to static IPs, as restarting Kafka will otherwise result in the assigned IP's to change.
+If they do not, there will be problems with the SSL certificates and he users will not be able to connect.
+https://strimzi.io/blog/2021/05/07/deploying-kafka-with-lets-encrypt-certificates/
+
+Previously, this setup was done through kubectl. However, it is now handled through Square. The kubectl instructions have
+been kept in case there is a need to use it in the future.
+
+Previous DNS provisioning workflow
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+To provision the Kafka broker IPs, we will use :command:`kubectl` to look up the IP addresses provisioned for the broker (see :ref:`kubectl`).
 
 Run :command:`kubectl get service --namespace alert-stream-broker` to get a list of all the services running:
 
@@ -1044,27 +1121,6 @@ Request DNS A records that map useful hostnames to these IP addresses - this is 
 
 Once you have DNS provisioned, make another change to ``values-<environment>.yaml`` to lock in the IP addresses and inform Kafka of the hostnames to use.
 For example, here's ``values-idfint.yaml``:
-
-.. code-block::
-
-    alert-stream-broker:
-      cluster:
-        name: "alert-broker"
-
-      kafka:
-        # Addresses based on the state as of 2021-12-02; these were assigned by
-        # Google and now we're pinning them.
-        externalListener:
-          bootstrap:
-            ip: 35.188.169.31
-            host: alert-stream-int.lsst.cloud
-          brokers:
-            - ip: 35.239.64.164
-              host: alert-stream-int-broker-0.lsst.cloud
-            - ip: 34.122.165.155
-              host: alert-stream-int-broker-1.lsst.cloud
-            - ip: 35.238.120.127
-              host: alert-stream-int-broker-2.lsst.cloud
 
 Apply this change as usual (see :ref:`deploying-a-change`).
 Now the broker *should* be accessible.
