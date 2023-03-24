@@ -155,14 +155,15 @@ Then, here's how to run it locally:
 
 .. code-block:: bash
 
-   KAFKA_PASSWORD="..."  # fill this in
+   export KAFKA_USER=$(op item get "alert-stream idfint kafka-admin" --fields label=username)
+   export KAFKA_PASSWORD=$(op item get "alert-stream idfint kafka-admin" --fields label=password)
 
    docker run \
        -p 8080:8080 \
        -e KAFKA_BROKERS=alert-stream-int.lsst.cloud:9094 \
        -e KAFKA_TLS_ENABLED=true \
        -e KAFKA_SASL_ENABLED=true \
-       -e KAFKA_SASL_USERNAME="kafka-admin" \
+       -e KAFKA_SASL_USERNAME=$KAFKA_USER \
        -e KAFKA_SASL_PASSWORD=$KAFKA_PASSWORD \
        -e KAFKA_SASL_MECHANISM=SCRAM-SHA-512 \
        -e KAFKA_SCHEMAREGISTRY_ENABLED=true \
