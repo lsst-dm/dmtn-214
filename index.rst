@@ -54,14 +54,11 @@ depend on updates in other applications. These may require you to delete that sp
 
 The recommended deployment order for easy troubleshooting is:
 
-.. code-block::
-
-        1. Deploy Kafka Cluster
-        2. Deploy strimzi registry operator
-        3. Deploy the schema registry
-        4. Deploy the ingress schema for the schema registry
-        5. Deploy other services
-
+1. Deploy Kafka Cluster
+2. Deploy strimzi registry operator
+3. Deploy the schema registry
+4. Deploy the ingress schema for the schema registry
+5. Deploy other services
 
 The strimzi registry operator and schema registry can be a bit of a chicken or egg problem, and you
 may have to re-deploy the operator again after the schema registry, and then redeploy the registry for
@@ -236,6 +233,13 @@ If that happens, open up ~/.config/gcloud/configurations/config_default and set 
 
 .. _running-kowl:
 
+Secure Password Use
+-------------------
+
+In the following sections, you CAN fill in both the username and the password manually on your command line. However, this
+is not secure and can leave the password/usernames in your command line history. Instead, if you are using 1password, you
+should use `1passwords command line tool  <https://1password.com/downloads/command-line/>`__ so that you do not directly enter your credentials.
+
 Running Kowl
 ------------
 
@@ -246,14 +250,15 @@ Running Kowl
 
    .. code-block:: sh
 
-     KAFKA_PASSWORD="..."  # fill this in
+     export KAFKA_USER=$(op item get "alert-stream idfint kafka-admin" --fields label=username)
+     export KAFKA_PASSWORD=$(op item get "alert-stream idfint kafka-admin" --fields label=password)
 
      docker run \
        -p 8080:8080 \
        -e KAFKA_BROKERS=alert-stream-int.lsst.cloud:9094 \
        -e KAFKA_TLS_ENABLED=true \
        -e KAFKA_SASL_ENABLED=true \
-       -e KAFKA_SASL_USERNAME="kafka-admin" \
+       -e KAFKA_SASL_USERNAME=$KAFKA_USER \
        -e KAFKA_SASL_PASSWORD=$KAFKA_PASSWORD \
        -e KAFKA_SASL_MECHANISM=SCRAM-SHA-512 \
        -e KAFKA_SCHEMAREGISTRY_ENABLED=true \
@@ -268,21 +273,12 @@ Retrieving Kafka superuser credentials
 --------------------------------------
 
 The superuser has access to do anything.
-Be careful with these credentials!
-
-The username is "**kafka-admin**".
-
-For the password:
+Be careful with these credentials! To find
+the credentials:
 
 1. Log in to 1Password in the LSST IT account.
 2. Go to the "RSP-Vault" vault.
 3. Search for "alert-stream idfint kafka-admin".
-
-   You should see something like this:
-
-   .. figure:: /_static/1password_superuser.png
-
-4. Copy the password from the password field.
 
 .. _developer-creds:
 
@@ -291,20 +287,9 @@ Retrieving development credentials
 
 This user only has limited permissions, mimicking those of a community broker.
 
-The username is "**rubin-communitybroker-idfint**".
-
-For the password:
-
 1. Log in to 1Password in the LSST IT account.
 2. Go to the "RSP-Vault" vault.
 3. Search for "alert-stream idfint rubin-communitybroker-idfint".
-
-   You should see something like this:
-
-   .. figure:: /_static/1password_devel_user.png
-
-4. Copy the password from the password field.
-
 
 System Status
 =============
