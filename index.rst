@@ -694,18 +694,23 @@ For example, for version ``v1.2.1``:
 
 
 
-Getting the schema registry's ID
+Schema Registry Ids
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Next, you'll need to get the ID that is used by the schema registry so that you can use it in the alert stream simulator deployment.
-This is easiest to retrieve using Kowl.
+Schema ids are determined by the schema version number. Ids are assigned using the major number and assigning the minor number
+to a 00 format. For example, schema version 7.1 will be schema id number 701. Schema 13.12 would be schema 1312 and so forth.
+
+These ids are generated automatically from the schemas within `lsst/alert/packet/schema`_ in `github.com/lsst/alert_packet`_,
+and are assigned to the registry in `syncAllSchemasToRegistry.py`_.
+Corresponding ids are assigned to alerts in `packageAlerts.py`_.
+
+Kowl is the easiest way to view current schema ids and the schema id used for specific alerts.
 
 Run Kowl (see :ref:`running-kowl`) and then navigate to http://localhost:8080/schema-registry/alert-packet.
 There should be a drop-down with different versions. You probably want the latest version, which might already be the one being displayed.
 Select the desired version.
 
 At the top of the screen, you should see the "Schema ID" of the schema you have selected.
-This integer is an ID we'll need to reference later.
 
 Updating the Alert Stream Simulator values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1131,6 +1136,9 @@ This may cause some downtime as the kafka nodes are terminated and replaced with
 .. _alert-stream-broker/charts: https://github.com/lsst-sqre/phalanx/tree/main/applications/alert-stream-broker/charts
 .. _github.com/lsst/idf_deploy: https://github.com/lsst/idf_deploy
 .. _github.com/lsst/alert_packet: https://github.com/lsst/alert_packet
+.. _packageAlerts.py: https://github.com/lsst/ap_association/blob/main/python/lsst/ap/association/packageAlerts.py
+.. _lsst/alert/packet/schema: https://github.com/lsst/alert_packet/tree/main/python/lsst/alert/packet/schema
+.. _syncAllSchemasToRegistry: https://github.com/lsst/alert_packet/blob/main/python/lsst/alert/packet/bin/syncAllSchemasToRegistry.py
 .. _github.com/lsst-dm/alert-stream-simulator: https://github.com/lsst-dm/alert-stream-simulator
 .. _github.com/lsst-dm/alert_database_ingester: https://github.com/lsst-dm/alert_database_ingester
 .. _github.com/lsst-dm/alert_database_server: https://github.com/lsst-dm/alert_database_server
