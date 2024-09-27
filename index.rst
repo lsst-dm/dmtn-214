@@ -1,9 +1,15 @@
+###########################################
+Alert Distribution System Operator's Manual
+###########################################
+
+.. abstract::
+
+   This is a practical collection of instructions, troubleshooting tips, and playbooks for managing and maintaining the Alert Distribution System.
+
 ..
   Technote content.
 
-:tocdepth: 1
 
-.. sectnum::
 
 .. note::
 
@@ -1216,7 +1222,10 @@ This may cause some downtime as the kafka nodes are terminated and replaced with
 .. _values-usdfdev-alert-stream-broker.yaml:: https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml
 
 
-.. rubric:: References
+References
+==========
 
-.. bibliography:: local.bib lsstbib/books.bib lsstbib/lsst.bib lsstbib/lsst-dm.bib lsstbib/refs.bib lsstbib/refs_ads.bib
+
+.. bibliography::
+
     :style: lsst_aa
