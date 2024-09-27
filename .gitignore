@@ -1,13 +1,5 @@
 _build/
-
-.idea/inspectionProfiles/profiles_settings.xml
-
-.idea/dmtn-214.iml
-
-.idea/inspectionProfiles/Project_Default.xml
-
-.idea/misc.xml
-
-.idea/vcs.xml
-
-.idea/modules.xml
+.technote/
+.tox/
+venv/
+.venv/
