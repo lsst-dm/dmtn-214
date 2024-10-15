@@ -72,7 +72,7 @@ The recommended deployment order for easy troubleshooting is:
 The strimzi registry operator and schema registry can be a bit of a chicken or egg problem, and you
 may have to re-deploy the operator again after the schema registry, and then redeploy the registry for
 the two to reconcile with each other after the schema ingress and schema registry are deployed. If Kafka has not
-properly built and all pods have not properly built, you will likely end up wih and empty schema registry.
+properly built and all pods have not properly built, you will likely end up wih an empty schema registry.
 
 Troubleshooting
 ~~~~~~~~~~~~~~~
@@ -467,14 +467,11 @@ First, generate new credentials for the user:
 
 Second, add the user to the configuration for the cluster:
 
-1. Make a change to `github.com/lsst-sqre/phalanx`_'s applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml
- file.
-   Add the new user to the list of users under ``alert-stream-broker.users``: https://github.com/lsst-sqre/phalanx/blob/4f65bb054229d0fd95ee95b50a18a124611411e6/applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml#L71C1-L71C1
-
-   Make sure you use the same username, and grant it read-only access to the ``alerts-simulated`` topic by setting ``readonlyTopics: ["alerts-simulated"]`` just like the other entries.
-
-   If more topics should be available, add them.
-   If running in a different environment than the USDF integration environment, modify the appropriate config file, not values-usdfdev-alert-stream-broker.yaml.
+1. Make a change to `github.com/lsst-sqre/phalanx`_'s applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml file.
+   * Add the new user to the list of users under ``alert-stream-broker.users``: https://github.com/lsst-sqre/phalanx/blob/4f65bb054229d0fd95ee95b50a18a124611411e6/applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml#L71C1-L71C1
+   * Make sure you use the same username, and grant it read-only access to the ``alerts-simulated`` topic by setting ``readonlyTopics: ["alerts-simulated"]`` just like the other entries.
+   * If more topics should be available, add them.
+   * If running in a different environment than the USDF integration environment, modify the appropriate config file, not values-usdfdev-alert-stream-broker.yaml.
 2. Make a pull request with your changes, and make sure it passes automated checks, and get it reviewed.
 3. Merge your PR. Wait a few minutes (perhaps 10) for Argo to pick up the change.
 4. Log in to Argo CD.
@@ -600,7 +597,7 @@ See `Strimzi documentation on Kafka Versions <https://strimzi.io/docs/operators/
 So, to update the version of Kafka used, update the `applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml
 <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml>`__ file in `github.com/lsst-sqre/phalanx`_.
 Under ``alert-stream-broker``, then under ``kafka``, add a value: ``version: <whatever you want>``.
- ``logMessageFormatVersion`` and ``interBrokerProtocolVersion`` are now set automatically and do not need to be manually set.
+``logMessageFormatVersion`` and ``interBrokerProtocolVersion`` are now set automatically and do not need to be manually set.
 
 Then, follow the steps in :ref:`deploying-a-change` to apply these changes.
 
@@ -1053,14 +1050,12 @@ https://strimzi.io/blog/2021/05/07/deploying-kafka-with-lets-encrypt-certificate
 
 If the pods have been deleted and re-starting them results in new IP's being automatically assigned or you see the following error,
 the previous pods were not deleted and may be orphaned. If you cannot see them via kubectl, you must get in contact
-with a kubernetes admin and have them delete the service. This may look like the following.
-
-.. code-block:: sh
+with a kubernetes admin and have them delete the service. This may look like the following::
 
     Failed to allocate IP for "alert-stream-broker/alert-broker-kafka-8": can't change sharing key for "alert-stream-broker/alert-broker-kafka-8", address also in use by vcluster--usdf-alert-stream-broker-dev/alert-broker-kafka-2-x-alert-stream-broker-x-vcluste-90c3cd7783
 
 Previous DNS provisioning workflow
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To provision the Kafka broker IPs, we will use :command:`kubectl` to look up the IP addresses provisioned for the broker (see :ref:`kubectl`).
 
@@ -1219,13 +1214,11 @@ This may cause some downtime as the kafka nodes are terminated and replaced with
 .. _science-platform: https://data-int.lsst.cloud/argo-cd/applications/argocd/science-platform?view=tree&resource=
 .. _usdf-alert-stream-broker-dev: https://k8s.slac.stanford.edu/usdf-alert-stream-broker-dev/argo-cd/applications/argocd/usdf-alert-stream-broker-dev?view=tree
 .. _kafka.yaml: https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/charts/alert-stream-broker/templates/kafka.yaml
-.. _values-usdfdev-alert-stream-broker.yaml:: https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml
-
+.. _values-usdfdev-alert-stream-broker.yaml: https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml
+.. _syncAllSchemasToRegistry.py: https://github.com/lsst/alert_packet/blob/main/python/lsst/alert/packet/bin/syncAllSchemasToRegistry.py
 
 References
 ==========
 
 
 .. bibliography::
-
-    :style: lsst_aa
