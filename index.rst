@@ -1,9 +1,15 @@
+###########################################
+Alert Distribution System Operator's Manual
+###########################################
+
+.. abstract::
+
+   This is a practical collection of instructions, troubleshooting tips, and playbooks for managing and maintaining the Alert Distribution System.
+
 ..
   Technote content.
 
-:tocdepth: 1
 
-.. sectnum::
 
 .. note::
 
@@ -55,29 +61,80 @@ depend on updates in other applications. These may require you to delete that sp
 
 The recommended deployment order for easy troubleshooting is:
 
-1. Deploy Kafka Cluster
-2. Deploy strimzi registry operator
-3. Deploy the schema registry
-4. Deploy the ingress schema for the schema registry
-5. Deploy other services
+1. Deploy the controller nodepool.
+2. Deploy the kafka nodepool. Note: Both will be empty until Kafka is deployed
+3. Deploy Alert Stream Kafka. Note: It may take some time for the deployment to create the services and pods
+4. Deploy strimzi registry operator
+5. Deploy the schema registry
+6. Deploy the ingress schema for the schema registry
+7. Deploy other services
 
 The strimzi registry operator and schema registry can be a bit of a chicken or egg problem, and you
 may have to re-deploy the operator again after the schema registry, and then redeploy the registry for
-the two to reconcile with each other after the schema ingress and schema registry are deployed.
+the two to reconcile with each other after the schema ingress and schema registry are deployed. If Kafka has not
+properly built and all pods have not properly built, you will likely end up wih an empty schema registry.
+
+Troubleshooting
+~~~~~~~~~~~~~~~
+
+If all of the brokers have failed but everything else is running, the brokers may be out of storage.
+This means that Kafka needs to have either the storage allotted or the retention limits adjusted. This requires a restart
+of the brokers, and may require a full re-deployment of the whole system.
+
+If you are fully restarting the Alert Broker, you may need to comment out the external load balancer and broker IP's.
+Comment out all of the code starting from the lines pictured below through the rest of the code block. This needs
+to be done in both `kafka.yaml`_ and `values-usdfdev-alert-stream-broker.yaml`_. Once the pods are up and running, uncomment the code so that
+the external bootstrap starts up and the IP's are properly assigned to the pods.
+
+.. figure:: /_static/kafka_yaml.png
+   :name: Kafka Yaml
+
+.. figure:: /_static/values_yaml.png
+   :name: Values Yaml
+
+If you try and restart the brokers from a fail state (whether they have run out of storage or not), and they end up in crashback loops,
+make sure to delete their persistent volume claims to ensure that they can rebuild.
 
 If, during deployment, any resource begins to error continuously, you can delete that specific resource while troubleshooting.
 This prevents the status channel from being continuously spammed with errors.
 It is recommended to grab the error log first from the logs tab first before deleting the resources.
 
+If you are attempting to delete the topics and they are stuck deleting, you need to remove the finalizers from the topics
+to allow them to be deleted. This is done via the following command.
+
+ .. code-block:: bash
+
+     kubectl patch kafkatopics.kafka.strimzi.io TOPIC-NAME --namespace alert-stream-broker -p '{"metadata":{"finalizers": []}}' --type=merge
+
+Replace TOPIC-NAME with the stuck topics.
+
 If for some reason the instance of alert-stream-broker has been removed from the active applications, you can re-deploy it by going to the
 `usdf-alert-stream-broker-dev`_ application and re-syncing alert-stream-broker.
 
-Trouble shooting: If all of the brokers have failed but everything else is running, the brokers may be out of storage.
-This means that Kafka needs to have either the storage allotted or the retention limits adjusted. This requires a restart
-of the brokers, and may require a full re-deployment of the whole system.
+If the alert-stream-broker-sync-schema job is failing, this may be related to several issues. If the alert-stream-broker
+application has been completely rebuilt from scratch, then the schema registry may not be fully set up. Check that the
+schema registry looks like this:
 
-If you try and restart the brokers from a fail state (whether they have run out of storage or not), and they end up in crashback loops,
-make sure to delete their persistent volume claims to ensure that they can rebuild.
+.. figure:: /_static/argocd_schema_registry.png
+   :name: Fully Deployed Schema Registry
+
+If it does not, follow the steps listed above. The sync schema job will still fail after this, as the alert-schema-registry
+application currently defaults to forward compatibility. This will need to be changed to none.
+
+.. figure:: /_static/argocd_deployed_registry.png
+   :name: Deployed Schema Registry
+
+.. figure:: /_static/argocd_schema_compatibility.png
+   :name: Schema Compatibility Level
+
+If you receive any errors that a service already exists or resources are being used by an existing service, and you cannot
+see that service or resource from argocd or kubectl, then the service or resource may not be accessible. The service/resource
+may still exist but needs to be manually deleted by a kubernetes administrator.
+
+Additionally, if resources or services are stuck or not deploying and there are no errors or the services does not produce
+a log, you can check the strimzi operator pod within the strimzi application in argo. There may be additional log
+information there.
+
 
 What is "Desired State" in Argo?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -298,16 +355,19 @@ Next, check how much is requested in the persistent volume claims used by the Ka
    .. code-block:: sh
 
       -> % kubectl get pvc -n alert-stream-broker
-        NAME                            STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS        AGE
-        data-0-alert-broker-kafka-0     Bound    pvc-8d76c17d-f0d5-4b2d-9609-b92fe4d221be   2500Gi     RWO            wekafs--sdf-k8s01   49d
-        data-0-alert-broker-kafka-1     Bound    pvc-a578bf5c-148f-4f36-8818-3ef42a30cf04   2500Gi     RWO            wekafs--sdf-k8s01   49d
-        data-0-alert-broker-kafka-2     Bound    pvc-1ab992df-5bed-4723-950b-52fa44efa1ad   2500Gi     RWO            wekafs--sdf-k8s01   49d
-        data-0-alert-broker-kafka-3     Bound    pvc-da1bcdfe-e92c-4548-8ed1-19208b27e86d   2500Gi     RWO            wekafs--sdf-k8s01   49d
-        data-0-alert-broker-kafka-4     Bound    pvc-9ee15974-5e48-41a7-ba3c-f48436a4cfc0   2500Gi     RWO            wekafs--sdf-k8s01   49d
-        data-0-alert-broker-kafka-5     Bound    pvc-65761ca0-218d-424b-8cf4-a955869f8448   2500Gi     RWO            wekafs--sdf-k8s01   49d
-        data-alert-broker-zookeeper-0   Bound    pvc-d1b54620-b9c6-4deb-8001-17900a7dd7a1   1000Gi     RWO            wekafs--sdf-k8s01   49d
-        data-alert-broker-zookeeper-1   Bound    pvc-d9540183-fa22-4003-9c34-78a69cdfe420   1000Gi     RWO            wekafs--sdf-k8s01   49d
-        data-alert-broker-zookeeper-2   Bound    pvc-d9faab9a-d703-40e5-ad43-29a6a3a7235a   1000Gi     RWO            wekafs--sdf-k8s01   49d
+        NAME                               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS        VOLUMEATTRIBUTESCLASS   AGE
+        data-0-alert-broker-controller-0   Bound    pvc-7ec41769-3643-40ef-8bcb-0aa0f377e093   20Gi       RWO            wekafs--sdf-k8s01   <unset>                 22h
+        data-0-alert-broker-controller-1   Bound    pvc-a3102c54-2bb5-4f68-b4d0-921cce2cd57a   20Gi       RWO            wekafs--sdf-k8s01   <unset>                 22h
+        data-0-alert-broker-controller-2   Bound    pvc-9c85d80c-b5a6-4d81-a95d-c2b734e9429e   20Gi       RWO            wekafs--sdf-k8s01   <unset>                 22h
+        data-0-alert-broker-controller-3   Bound    pvc-3aa61263-dd82-4890-8bab-b038b154a845   20Gi       RWO            wekafs--sdf-k8s01   <unset>                 22h
+        data-0-alert-broker-controller-4   Bound    pvc-f42e1031-903d-4923-8c6f-b4b91f6e6a0b   20Gi       RWO            wekafs--sdf-k8s01   <unset>                 22h
+        data-0-alert-broker-controller-5   Bound    pvc-737b03a7-144e-4371-9c98-352870afe070   20Gi       RWO            wekafs--sdf-k8s01   <unset>                 22h
+        data-0-alert-broker-kafka-10       Bound    pvc-ce20e21b-4e04-419f-bf03-fea6b0ff10ca   2500Gi     RWO            wekafs--sdf-k8s01   <unset>                 22h
+        data-0-alert-broker-kafka-11       Bound    pvc-e52f5109-7fac-4a37-a505-2f0c624696e4   2500Gi     RWO            wekafs--sdf-k8s01   <unset>                 22h
+        data-0-alert-broker-kafka-6        Bound    pvc-7b59f3ad-e6d3-4063-87ae-b2b2732c93af   2500Gi     RWO            wekafs--sdf-k8s01   <unset>                 22h
+        data-0-alert-broker-kafka-7        Bound    pvc-1d9bdef8-e524-41ad-8cf0-12db3c9ea101   2500Gi     RWO            wekafs--sdf-k8s01   <unset>                 22h
+        data-0-alert-broker-kafka-8        Bound    pvc-be557069-a4bb-4def-abf1-5a386535b616   2500Gi     RWO            wekafs--sdf-k8s01   <unset>                 22h
+        data-0-alert-broker-kafka-9        Bound    pvc-218f52f6-b7b2-4948-97cc-2792fd1e8dfb   2500Gi     RWO            wekafs--sdf-k8s01   <unset>                 22h
 
 
 Checking consumer group status
@@ -407,14 +467,11 @@ First, generate new credentials for the user:
 
 Second, add the user to the configuration for the cluster:
 
-1. Make a change to `github.com/lsst-sqre/phalanx`_'s applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml
- file.
-   Add the new user to the list of users under ``alert-stream-broker.users``: https://github.com/lsst-sqre/phalanx/blob/4f65bb054229d0fd95ee95b50a18a124611411e6/applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml#L71C1-L71C1
-
-   Make sure you use the same username, and grant it read-only access to the ``alerts-simulated`` topic by setting ``readonlyTopics: ["alerts-simulated"]`` just like the other entries.
-
-   If more topics should be available, add them.
-   If running in a different environment than the USDF integration environment, modify the appropriate config file, not values-usdfdev-alert-stream-broker.yaml.
+1. Make a change to `github.com/lsst-sqre/phalanx`_'s applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml file.
+   * Add the new user to the list of users under ``alert-stream-broker.users``: https://github.com/lsst-sqre/phalanx/blob/4f65bb054229d0fd95ee95b50a18a124611411e6/applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml#L71C1-L71C1
+   * Make sure you use the same username, and grant it read-only access to the ``alerts-simulated`` topic by setting ``readonlyTopics: ["alerts-simulated"]`` just like the other entries.
+   * If more topics should be available, add them.
+   * If running in a different environment than the USDF integration environment, modify the appropriate config file, not values-usdfdev-alert-stream-broker.yaml.
 2. Make a pull request with your changes, and make sure it passes automated checks, and get it reviewed.
 3. Merge your PR. Wait a few minutes (perhaps 10) for Argo to pick up the change.
 4. Log in to Argo CD.
@@ -540,7 +597,7 @@ See `Strimzi documentation on Kafka Versions <https://strimzi.io/docs/operators/
 So, to update the version of Kafka used, update the `applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml
 <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml>`__ file in `github.com/lsst-sqre/phalanx`_.
 Under ``alert-stream-broker``, then under ``kafka``, add a value: ``version: <whatever you want>``.
-If necessary, also set ``logMessageFormatVersion`` and ``interBrokerProtocolVersion`` here.
+``logMessageFormatVersion`` and ``interBrokerProtocolVersion`` are now set automatically and do not need to be manually set.
 
 Then, follow the steps in :ref:`deploying-a-change` to apply these changes.
 
@@ -550,6 +607,9 @@ Updating the Strimzi version
 ----------------------------
 The current version of Strimzi used by the Alert Broker is updated and managed by Square. Any changes to the version should be
 discussed with them. If any specific changes are required, you probably want to read the Strimzi Documentation's "`9. Upgrading Strimzi <https://strimzi.io/docs/operators/latest/full/deploying.html#assembly-upgrade-str>`__".
+The Strimzi application does not automatically sync to the latest version on phalanx and must be manually synced. This is to
+prevent Strimzi from automatically updated to a version which does not support the current Kafka version used by the Alert Broker.
+This requires monitoring of the Strimzi version supported by Square to keep both the Kafka version and Strimzi version in sync.
 
 The Strimzi version version is governed by the version referenced in `github.com/lsst-sqre/phalanx`_'s `applications/strimzi/Chart.yaml <https://github.com/lsst-sqre/phalanx/tree/main/applications//strimzi/Chart.yaml#L9>`__ file.
 
@@ -952,7 +1012,7 @@ Once the alert-stream-broker is synced into a half-broken, half-working state, w
 This will let us provision more DNS records: those for the Kafka brokers.
 
 In  the current gcloud setup, this must be done through Square. If you cannot use the existing static IPs, you must
-request that you are assigned three for the Kafka brokers, and that the DNS records are updated to point to the correct
+request that you are assigned six for the Kafka brokers, and that the DNS records are updated to point to the correct
 static IPs.
 
 You will then need to update ``values-idfint.yaml``:
@@ -984,12 +1044,18 @@ You will then need to update ``values-idfint.yaml``:
 
 The Kafka brokers MUST point to static IPs, as restarting Kafka will otherwise result in the assigned IP's to change.
 If they do not, there will be problems with the SSL certificates and he users will not be able to connect. See the following
-link for an explination on why:
+link for an explanation on why:
 
 https://strimzi.io/blog/2021/05/07/deploying-kafka-with-lets-encrypt-certificates/
 
+If the pods have been deleted and re-starting them results in new IP's being automatically assigned or you see the following error,
+the previous pods were not deleted and may be orphaned. If you cannot see them via kubectl, you must get in contact
+with a kubernetes admin and have them delete the service. This may look like the following::
+
+    Failed to allocate IP for "alert-stream-broker/alert-broker-kafka-8": can't change sharing key for "alert-stream-broker/alert-broker-kafka-8", address also in use by vcluster--usdf-alert-stream-broker-dev/alert-broker-kafka-2-x-alert-stream-broker-x-vcluste-90c3cd7783
+
 Previous DNS provisioning workflow
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To provision the Kafka broker IPs, we will use :command:`kubectl` to look up the IP addresses provisioned for the broker (see :ref:`kubectl`).
 
@@ -999,19 +1065,17 @@ Run :command:`kubectl get service --namespace alert-stream-broker` to get a list
 
     -> % kubectl get service  -n alert-stream-broker
     NAME                                    TYPE           CLUSTER-IP       EXTERNAL-IP     PORT(S)                               AGE
-    alert-broker-kafka-0                    LoadBalancer   10.111.184.244   134.79.23.214   9094:32428/TCP                        49d
-    alert-broker-kafka-1                    LoadBalancer   10.98.140.221    134.79.23.216   9094:31655/TCP                        49d
-    alert-broker-kafka-2                    LoadBalancer   10.99.20.149     134.79.23.218   9094:31708/TCP                        49d
-    alert-broker-kafka-3                    LoadBalancer   10.100.3.57      134.79.23.220   9094:30049/TCP                        49d
-    alert-broker-kafka-4                    LoadBalancer   10.108.53.140    134.79.23.217   9094:31082/TCP                        49d
-    alert-broker-kafka-5                    LoadBalancer   10.107.42.132    134.79.23.219   9094:32023/TCP                        49d
-    alert-broker-kafka-bootstrap            ClusterIP      10.104.242.67    <none>          9091/TCP,9092/TCP,9093/TCP            49d
-    alert-broker-kafka-brokers              ClusterIP      None             <none>          9090/TCP,9091/TCP,9092/TCP,9093/TCP   49d
-    alert-broker-kafka-external-bootstrap   LoadBalancer   10.99.103.38     134.79.23.215   9094:32712/TCP                        49d
-    alert-broker-zookeeper-client           ClusterIP      10.108.49.91     <none>          2181/TCP                              49d
-    alert-broker-zookeeper-nodes            ClusterIP      None             <none>          2181/TCP,2888/TCP,3888/TCP            49d
-    alert-schema-registry                   ClusterIP      10.102.37.112    <none>          8081/TCP                              49d
-    alert-stream-broker-alert-database      ClusterIP      10.99.10.104     <none>          3000/TCP                              49d
+    alert-broker-kafka-10                   LoadBalancer   10.108.207.210   134.79.23.217   9094:31234/TCP                                 24h
+    alert-broker-kafka-11                   LoadBalancer   10.97.120.2      134.79.23.219   9094:31858/TCP                                 24h
+    alert-broker-kafka-6                    LoadBalancer   10.96.28.225     134.79.23.214   9094:30302/TCP                                 24h
+    alert-broker-kafka-7                    LoadBalancer   10.108.145.98    134.79.23.216   9094:30747/TCP                                 24h
+    alert-broker-kafka-8                    LoadBalancer   10.108.169.180   134.79.23.218   9094:31850/TCP                                 24h
+    alert-broker-kafka-9                    LoadBalancer   10.101.139.74    134.79.23.220   9094:32476/TCP                                 24h
+    alert-broker-kafka-bootstrap            ClusterIP      10.99.56.206     <none>          9091/TCP,9092/TCP,9093/TCP                     24h
+    alert-broker-kafka-brokers              ClusterIP      None             <none>          9090/TCP,9091/TCP,8443/TCP,9092/TCP,9093/TCP   24h
+    alert-broker-kafka-external-bootstrap   LoadBalancer   10.111.167.245   134.79.23.185   9094:30280/TCP                                 24h
+    alert-schema-registry                   ClusterIP      10.104.135.221   <none>          8081/TCP                                       23h
+    alert-stream-broker-alert-database      ClusterIP      10.99.69.201     <none>          3000/TCP                                       23h                            49d
 
 
 The important column here is "EXTERNAL-IP."
@@ -1149,8 +1213,12 @@ This may cause some downtime as the kafka nodes are terminated and replaced with
 .. _charts/alert-stream-schema-registry: https://github.com/lsst-sqre/phalanx/tree/main/applications/alert-stream-broker/charts/alert-stream-schema-registry
 .. _science-platform: https://data-int.lsst.cloud/argo-cd/applications/argocd/science-platform?view=tree&resource=
 .. _usdf-alert-stream-broker-dev: https://k8s.slac.stanford.edu/usdf-alert-stream-broker-dev/argo-cd/applications/argocd/usdf-alert-stream-broker-dev?view=tree
+.. _kafka.yaml: https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/charts/alert-stream-broker/templates/kafka.yaml
+.. _values-usdfdev-alert-stream-broker.yaml: https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml
+.. _syncAllSchemasToRegistry.py: https://github.com/lsst/alert_packet/blob/main/python/lsst/alert/packet/bin/syncAllSchemasToRegistry.py
 
-.. rubric:: References
+References
+==========
 
-.. bibliography:: local.bib lsstbib/books.bib lsstbib/lsst.bib lsstbib/lsst-dm.bib lsstbib/refs.bib lsstbib/refs_ads.bib
-    :style: lsst_aa
+
+.. bibliography::
