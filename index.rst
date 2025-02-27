@@ -74,67 +74,7 @@ may have to re-deploy the operator again after the schema registry, and then red
 the two to reconcile with each other after the schema ingress and schema registry are deployed. If Kafka has not
 properly built and all pods have not properly built, you will likely end up wih an empty schema registry.
 
-Troubleshooting
-~~~~~~~~~~~~~~~
-
-If all of the brokers have failed but everything else is running, the brokers may be out of storage.
-This means that Kafka needs to have either the storage allotted or the retention limits adjusted. This requires a restart
-of the brokers, and may require a full re-deployment of the whole system.
-
-If you are fully restarting the Alert Broker, you may need to comment out the external load balancer and broker IP's.
-Comment out all of the code starting from the lines pictured below through the rest of the code block. This needs
-to be done in both `kafka.yaml`_ and `values-usdfdev-alert-stream-broker.yaml`_. Once the pods are up and running, uncomment the code so that
-the external bootstrap starts up and the IP's are properly assigned to the pods.
-
-.. figure:: /_static/kafka_yaml.png
-   :name: Kafka Yaml
-
-.. figure:: /_static/values_yaml.png
-   :name: Values Yaml
-
-If you try and restart the brokers from a fail state (whether they have run out of storage or not), and they end up in crashback loops,
-make sure to delete their persistent volume claims to ensure that they can rebuild.
-
-If, during deployment, any resource begins to error continuously, you can delete that specific resource while troubleshooting.
-This prevents the status channel from being continuously spammed with errors.
-It is recommended to grab the error log first from the logs tab first before deleting the resources.
-
-If you are attempting to delete the topics and they are stuck deleting, you need to remove the finalizers from the topics
-to allow them to be deleted. This is done via the following command.
-
- .. code-block:: bash
-
-     kubectl patch kafkatopics.kafka.strimzi.io TOPIC-NAME --namespace alert-stream-broker -p '{"metadata":{"finalizers": []}}' --type=merge
-
-Replace TOPIC-NAME with the stuck topics.
-
-If for some reason the instance of alert-stream-broker has been removed from the active applications, you can re-deploy it by going to the
-`usdf-alert-stream-broker-dev`_ application and re-syncing alert-stream-broker.
-
-If the alert-stream-broker-sync-schema job is failing, this may be related to several issues. If the alert-stream-broker
-application has been completely rebuilt from scratch, then the schema registry may not be fully set up. Check that the
-schema registry looks like this:
-
-.. figure:: /_static/argocd_schema_registry.png
-   :name: Fully Deployed Schema Registry
-
-If it does not, follow the steps listed above. The sync schema job will still fail after this, as the alert-schema-registry
-application currently defaults to forward compatibility. This will need to be changed to none.
-
-.. figure:: /_static/argocd_deployed_registry.png
-   :name: Deployed Schema Registry
-
-.. figure:: /_static/argocd_schema_compatibility.png
-   :name: Schema Compatibility Level
-
-If you receive any errors that a service already exists or resources are being used by an existing service, and you cannot
-see that service or resource from argocd or kubectl, then the service or resource may not be accessible. The service/resource
-may still exist but needs to be manually deleted by a kubernetes administrator.
-
-Additionally, if resources or services are stuck or not deploying and there are no errors or the services does not produce
-a log, you can check the strimzi operator pod within the strimzi application in argo. There may be additional log
-information there.
-
+For additional troubleshooting tips, go to Troubleshooting :ref:`troubleshooting`
 
 What is "Desired State" in Argo?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1052,7 +992,8 @@ If the pods have been deleted and re-starting them results in new IP's being aut
 the previous pods were not deleted and may be orphaned. If you cannot see them via kubectl, you must get in contact
 with a kubernetes admin and have them delete the service. This may look like the following::
 
-    Failed to allocate IP for "alert-stream-broker/alert-broker-kafka-8": can't change sharing key for "alert-stream-broker/alert-broker-kafka-8", address also in use by vcluster--usdf-alert-stream-broker-dev/alert-broker-kafka-2-x-alert-stream-broker-x-vcluste-90c3cd7783
+    Failed to allocate IP for "alert-stream-broker/alert-broker-kafka-8": can't change sharing key for "alert-stream-broker/alert-broker-kafka-8",
+    address also in use by vcluster--usdf-alert-stream-broker-dev/alert-broker-kafka-2-x-alert-stream-broker-x-vcluste-90c3cd7783
 
 Previous DNS provisioning workflow
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1194,6 +1135,84 @@ This is set in the terraform configuration in `environment/deployments/science-p
 Change this, and apply the terraform change.
 
 This may cause some downtime as the kafka nodes are terminated and replaced with new ones, evicting the Kafka brokers, but this isn't known for certain.
+
+.. _troubleshooting:
+
+Troubleshooting
+~~~~~~~~~~~~~~~
+
+If all of the brokers have failed but everything else is running, the brokers may be out of storage.
+This means that Kafka needs to have either the storage allotted or the retention limits adjusted. This requires a restart
+of the brokers, and may require a full re-deployment of the whole system.
+
+If you are fully restarting the Alert Broker, you may need to comment out the external load balancer and broker IP's.
+Comment out all of the code starting from the lines pictured below through the rest of the code block. This needs
+to be done in both `kafka.yaml`_ and `values-usdfdev-alert-stream-broker.yaml`_. Once the pods are up and running, uncomment the code so that
+the external bootstrap starts up and the IP's are properly assigned to the pods.
+
+.. figure:: /_static/kafka_yaml.png
+   :name: Kafka Yaml
+
+.. figure:: /_static/values_yaml.png
+   :name: Values Yaml
+
+If you try and restart the brokers from a fail state (whether they have run out of storage or not), and they end up in crashback loops,
+make sure to delete their persistent volume claims to ensure that they can rebuild.
+
+If, during deployment, any resource begins to error continuously, you can delete that specific resource while troubleshooting.
+This prevents the status channel from being continuously spammed with errors.
+It is recommended to grab the error log first from the logs tab first before deleting the resources.
+
+If you are attempting to delete the topics and they are stuck deleting, you need to remove the finalizers from the topics
+to allow them to be deleted. This is done via the following command.
+
+ .. code-block:: bash
+
+     kubectl patch kafkatopics.kafka.strimzi.io TOPIC-NAME --namespace alert-stream-broker -p '{"metadata":{"finalizers": []}}' --type=merge
+
+Replace TOPIC-NAME with the stuck topics.
+
+If a pod is stuck terminating, check the pod's status:
+
+.. code-block:: bash
+
+    kubectl get pods -n alert-stream-broker
+
+If it says termination is pending, use the following command to forcibly delete the pod.
+
+.. code-block:: bash
+
+    kubectl delete pod alert-broker-controller-3 --grace-period=0 --force --namespace alert-stream-broker
+
+If it is not starting back up correctly, and you are stuck with a pod that won't build and won't delete, try
+the above command again. If it persists, ask for help from USDF.
+
+If for some reason the instance of alert-stream-broker has been removed from the active applications, you can re-deploy it by going to the
+`usdf-alert-stream-broker-dev`_ application and re-syncing alert-stream-broker.
+
+If the alert-stream-broker-sync-schema job is failing, this may be related to several issues. If the alert-stream-broker
+application has been completely rebuilt from scratch, then the schema registry may not be fully set up. Check that the
+schema registry looks like this:
+
+.. figure:: /_static/argocd_schema_registry.png
+   :name: Fully Deployed Schema Registry
+
+If it does not, follow the steps listed above. The sync schema job will still fail after this, as the alert-schema-registry
+application currently defaults to forward compatibility. This will need to be changed to none.
+
+.. figure:: /_static/argocd_deployed_registry.png
+   :name: Deployed Schema Registry
+
+.. figure:: /_static/argocd_schema_compatibility.png
+   :name: Schema Compatibility Level
+
+If you receive any errors that a service already exists or resources are being used by an existing service, and you cannot
+see that service or resource from argocd or kubectl, then the service or resource may not be accessible. The service/resource
+may still exist but needs to be manually deleted by a kubernetes administrator.
+
+Additionally, if resources or services are stuck or not deploying and there are no errors or the services does not produce
+a log, you can check the strimzi operator pod within the strimzi application in argo. There may be additional log
+information there.
 
 .. _Google Cloud Platform's console: https://console.cloud.google.com/home/dashboard?project=science-platform-int-dc5d
 .. _github.com/lsst-sqre/phalanx: https://github.com/lsst-sqre/phalanx
