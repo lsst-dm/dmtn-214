@@ -35,12 +35,14 @@ This section tries to summarize what you'd need to know to work with the Alert D
 Accessing Argo
 ~~~~~~~~~~~~~~
 
-To access the Alert Stream Broker deployment at the USDF, use the Argo installation at
-`https://k8s.slac.stanford.edu/usdf-alert-stream-broker-dev/argo-cd/applications <https://k8s.slac.stanford.edu/usdf-alert-stream-broker-dev/argo-cd/applications>`__.
-Access to that installation is managed by the SQuARE team.
+To access the Alert Stream Broker deployment at the USDF, use the Argo installation
+`usdf-alert-stream-broker-dev <https://usdf-alert-stream-broker-dev.slac.stanford.edu/argo-cd/applications>`__.
+Access to that installation is managed by the SQuARE team. You must have a SLAC windows account to log in.
 
 When you go to the Argo UI for the first time, you'll see a big mess of many "applications."
-The primary one is named `alert-stream-broker <https://k8s.slac.stanford.edu/usdf-alert-stream-broker-dev/argo-cd/applications/argocd/alert-stream-broker?view=tree>`__, but you may also be interested in the "`strimzi <https://data-int.lsst.cloud/argo-cd/applications/strimzi>`__" and "`strimzi-registry-operator <https://data-int.lsst.cloud/argo-cd/applications/strimzi>`__" ones.
+The primary one is named `alert-stream-broker <https://usdf-alert-stream-broker-dev.slac.stanford.edu/argo-cd/applications/argocd/alert-stream-broker?view=tree>`__
+but you may also be interested in the `strimzi <https://usdf-alert-stream-broker-dev.slac.stanford.edu/argo-cd/applications/argocd/strimzi>`__
+and `postgres <https://usdf-alert-stream-broker-dev.slac.stanford.edu/argo-cd/applications/argocd/postgres>`__ applications.
 
 Applying Changes by Syncing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -97,9 +99,6 @@ You might want to refresh a few times and make sure that the Git reference liste
 .. _Phalanx repository: https://github.com/lsst-sqre/phalanx
 .. _Charts directory of alert-stream-broker: https://github.com/lsst-sqre/phalanx/tree/main/applications/alert-stream-broker/charts
 
-For troubleshooting: Changes to the strimzi-operator may cause the alert-schema-registry to not fully deploy.
-
-
 
 1Password
 ---------
@@ -108,19 +107,49 @@ For troubleshooting: Changes to the strimzi-operator may cause the alert-schema-
 LSST IT uses it to distribute passwords, and the SQuARE team has adapted it for managing secrets stored in Kubernetes.
 
 It's worth reading the documentation in Phalanx on this subject:
- - `Add a secret with 1Password and VaultSecret <https://phalanx.lsst.io/developers/add-a-onepassword-secret.html>`__
- - `Updating a secret stored in 1Password and VaultSecret <https://phalanx.lsst.io/developers/update-a-onepassword-secret.html>`__
+ - `Add a secret with 1Password and VaultSecret <https://phalanx.lsst.io/admin/add-new-secret.html>`__
+ - `Updating a secret stored in 1Password and VaultSecret <https://phalanx.lsst.io/admin/update-a-secret.html>`__
 
 Managing the Alert Distribution System requires 1Password access.
 The LSST IT team can grant that access.
 Then, you'll also need access to the "RSP-Vault" vault in 1Password, which can be granted by the SQuARE team.
 
 The idea is that credentials are stored in a special 1Password vault with carefully formatted fields.
-Then you can run the phalanx `installer/update_secrets.sh <https://github.com/lsst-sqre/phalanx/blob/master/installer/update_secrets.sh>`__ script to copy secrets from 1Password into Vault, which is a tool for encrypting secret data.
+Then you can run the phalanx `vault-secrets-operator <https://phalanx.lsst.io/admin/sync-secrets.html>`__ script to copy secrets from 1Password into Vault, which is a tool for encrypting secret data.
 
-In the background, a tool called Vault Secrets Operator copies secret data in Vault and puts it into Kubernetes secrets for use in Kubernetes applications.
+In the background, the Vault Secrets Operator copies secret data in Vault and puts it into Kubernetes secrets for use in Kubernetes applications.
 
 This is used to manage the passwords for the Kafka users that can access the alert stream: their passwords are set in 1Password, copied into Vault with the script, and then automatically synchronized into Strimzi KafkaUsers (see also: `DMTN-210 3.2.3.1: 1Password, Vault, and Passwords <https://dmtn-210.lsst.io/#password-vault-and-passwords>`__).
+
+.. _usdf-secrets-vault:
+
+USDF Secrets Vault
+------------------
+
+In addition to 1Password, secrets are also managed at USDF via the secrets vault. This can be used in conjunction with 1Password
+to update and alter secrets if using the `vault-secrets-operator` isn't an option.
+
+To access the vault, do the following steps at USDF:
+
+    .. code-block:: sh
+
+        module load vault
+
+        vault login -method=ldap username=YOUR-USERNAME
+
+You will now have access to the vault. If you want to view credentials within the vault use:
+
+        .. code-block::
+
+            vault kv get -mount=secret rubin/usdf-alert-stream-broker-dev/alert-stream-broker/
+
+This will list all of the credentials related to the alert-stream-broker. If you need to reconfigure any credentials,
+use the following command:
+
+        .. code-block::
+
+            vault kv get -format=json -field=data secret/rubin/usdf-alert-stream-broker-dev/alert-stream-broker/SECRET-TO-CHANGE > pg.json
+            vault kv put secret/rubin/usdf-alert-stream-broker-dev/alert-stream-broker/SECRET-TO-CHANGE @<(cat pg.json)
 
 .. _kowl:
 
@@ -128,12 +157,14 @@ Kowl
 ----
 
 Kowl :cite:`kowl` is a web application that provides a UI for a Kafka broker.
-It can help with peeking at messages in the Kafka topics, viewing the broker's configuration, monitoring the state of consumer groups, and more.
+It can help with peeking at messages in the Kafka topics, viewing the broker's configuration, monitoring the state of consumer groups, give
+some control over a specific consumers position in the alert stream, and more.
 
 Kowl can be run locally using Docker.
 It requires superuser permissions in the Kafka broker, which can be first retrieved from 1Password (see :ref:`superuser-creds`). The
 credentials for the USDF are currently labeled with `idfint` and will be updated in the future.
-Then, start up Docker and enter the following:
+Once Docker is running, enter the following commands if you have already set up 1password command line access. If you do
+not yet have 1password command line access set up, please see :ref:`secure-password-use`:
 
 .. code-block:: bash
 
@@ -186,6 +217,16 @@ port 8080 and you won't be able to access the Kowl through the local host.
 Tool Setup
 ==========
 
+.. _secure-password-use:
+
+Secure Password Use
+-------------------
+
+In the following sections, you CAN fill in both the username and the password manually on your command line. However, this
+is not secure and can leave the password/usernames in your command line history. Instead, if you are using 1password, you
+should use `1passwords command line tool  <https://1password.com/downloads/command-line/>`__ so that you do not directly enter your credentials.
+
+
 .. _kubectl:
 
 Getting ``kubectl`` Access for USDF
@@ -204,13 +245,6 @@ You should now have ``kubectl`` access. Try :command:`kubectl get kafka --namesp
   alert-broker   6                        3                     True    True
 
 .. _running-kowl:
-
-Secure Password Use
--------------------
-
-In the following sections, you CAN fill in both the username and the password manually on your command line. However, this
-is not secure and can leave the password/usernames in your command line history. Instead, if you are using 1password, you
-should use `1passwords command line tool  <https://1password.com/downloads/command-line/>`__ so that you do not directly enter your credentials.
 
 Running Kowl
 ------------
@@ -279,13 +313,12 @@ These will show whether you're able to connect to the Kafka stream and receive s
 Checking disk usage
 -------------------
 
-
 First, check how much disk is used by Kafka:
 
 1. Run Kowl, following the instructions in :ref:`running-kowl`.
 2. Navigate to the brokers view at http://localhost:8080/brokers.
 
-   You should see the amount of disk used by each broker in the right-most column under "size."
+You should see the amount of disk used by each broker in the right-most column under "size."
 
 Next, check how much is requested in the persistent volume claims used by the Kafka brokers:
 
@@ -332,6 +365,76 @@ can be viewed in the browser or downloaded. Tiles which have logs are Pods, Depl
 
 In the browser, you can view the logs from the previous container restarts. You can also use keywords such as `DEBUG` or `ERROR` to search for specific
 messages within the logs via the search bar.
+
+Checking Alert Stream status on Grafana
+---------------------------------------
+The alert stream status, as well as metrics on alert stream consumers, topics, lag, and throughput can be found
+on the `alert stream grafana dashboard <https://grafana.slac.stanford.edu/d/ca09e487-0d35-4225-ad15-8f734107042b/alert-stream-broker-kafka?orgId=1&from=now-24h&to=now&timezone=browser>`__.
+
+In addition to the dashboards, grafana will send notifications to the slack channel `alert-stream-notifications` when there are
+issues with pieces of the alert stream and the applications it depends on. The slack channel is currently private, and you must ask
+someone with access to add you.
+
+Alert Archive
+=============
+
+The alert archive system consists of the `alert archive server <https://github.com/lsst-dm/alert_database_server>`__ and
+`alert archive ingester <https://github.com/lsst-dm/alert_database_ingester>`__. The ingester and server are both setup
+within the alert stream system using phalanx under the `alert database folders <https://github.com/lsst-sqre/phalanx/tree/main/applications/alert-stream-broker/charts/alert-database>`
+
+Alert Archive Server
+--------------------
+
+The `alert archive server <https://github.com/lsst-dm/alert_database_server>`__ handles HTTP requests to the alert archive and returns
+the requests alert packet via a FastAPI application. See the alert archive server documentation for details on how to make
+requests.
+
+Alert Archive Ingester
+----------------------
+
+The `alert archive ingester <https://github.com/lsst-dm/alert_database_ingester>`__ reads alerts from a specified Kafka topic
+and writes the alerts and their schema to the alert archive.
+
+Once active, the alert archive ingester will always be listening to the specified topic and will write any new alerts
+to the alert archive.
+
+Troubleshooting
+---------------
+The alert archive ingester requires a region to be set even though we are not using AWS infrastructure. If it is not set or set
+to the wrong region, you will see the following error:
+
+   .. code-block::
+
+      botocore.exceptions.ClientError: An error occurred (SignatureDoesNotMatch) when calling the PutObject operation: None
+
+Currently we are using `us-east-1` as the default region.
+
+
+Accessing the archive manually at USDF
+--------------------------------------
+
+To access the archive at USDF, you need to load in the AWS credentials into your environment. This requires vault access. If you do not
+have vault access see `usdf-secrets-vault`. Once you have access to the AWS credentials loaded into your environment, you have several options for interacting with the archive.
+
+The MinIO module can be set up and used to access the alert archive.
+
+    .. code-block::
+
+        module load mc
+
+        mc alias set <ALIAS> <YOUR-S3-ENDPOINT> <YOUR-ACCESS-KEY> <YOUR-SECRET-KEY>
+
+From here you should be able to make changes to the archive using the mc command. For a
+full list of commands, see the `MinIo documentation <https://docs.min.io/enterprise/aistor-object-store/reference/cli/>`__
+
+To use s3 and s3api, you need to have the above AWS credentials loaded into your environment.
+
+    .. code-block::
+
+        alias s3="singularity exec /sdf/sw/s3/aws-cli_latest.sif aws --endpoint-url https://sdfembs3.sdf.slac.stanford.edu/ s3"
+
+        alias s3api='singularity exec /sdf/sw/s3/aws-cli_latest.sif aws --endpoint-url https://sdfembs3.sdf.slac.stanford.edu/ s3api'
+
 
 Administration
 ==============
@@ -382,6 +485,7 @@ If this seems to be having trouble, consider checking:
  - the Vault Secrets Operator logs to make sure it is updating secrets correctly
  - the Strimzi Entity Operator logs to make sure they are updating user accounts correctly
  - the Kafka broker logs to make sure it's healthy
+ - if you are still having issues, you can manually change the secret by following the instructions in `usdf-secrets-vault`
 
 .. _new-user:
 
@@ -460,7 +564,7 @@ Adding a new Kafka topic
 
 1. Add a new KafkaTopic resource to the ``templates`` directory in one of the charts that composes the alert-stream-broker service.
    This will be in the `alert-stream-broker/charts`_ repository.
-   For example, there is a KafkaTopic resource in the `alert-stream-simulator/templates/kafka-topics.yaml <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/charts/alert-stream-simulator/templates/kafka-topics.yaml>`__ file.
+   For example, there is a KafkaTopic resource in the `alert-stream-broker/templates/kafka-topics.yaml <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/charts/alert-stream-broker/templates/kafka-topics.yaml>`__ file.
 
    These files use the Helm templating language.
    See `The Chart Template Developer's Guide <https://helm.sh/docs/chart_template_guide/>`__ for more information on this language.
@@ -471,14 +575,14 @@ Adding a new Kafka topic
    Pick the chart that is most relevant to the topic you are adding.
    If it is not relevant to any particular chart, use the general `charts/alert-stream-broker`_ chart.
 2. Increment the version of the chart by updating the ``version`` field of its Chart.yaml file.
-   For example, `this line <https://github.com/lsst-sqre/charts/blob/0c2fe6c115623d7ae3852ab63b527a9fcd5d41bf/charts/alert-stream-simulator/Chart.yaml#L3>`__ of the alert-stream-simulator chart.
+   For example, `this line <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/charts/alert-stream-broker/Chart.yaml#L3>`__ of the alert-stream-simulator chart.
 3. Make a pull request with your changes to `alert-stream-broker/charts`_, and make sure it passes automated checks, and get it reviewed.
    Merge your PR.
 4. Next, you'll update the `applications/alert-stream-broker/Chart.yaml`_ file to reference the new version number of the chart you have updated.
-   For example, `this line <https://github.com/lsst-sqre/phalanx/blob/4f65bb054229d0fd95ee95b50a18a124611411e6/applications/alert-stream-broker/charts/alert-stream-broker/Chart.yaml#L3>`__ would need to be updated if you were adding a topic to the alert-stream-simulator.
+   For example, `this line <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/Chart.yaml#L3>`__ would need to be updated if you were adding a topic to the alert-stream-simulator.
 5. Make a pull request with your changes to github.com/lsst-sqre/phalanx, and make sure it passes automated checks, and get it reviewed.
    Merge your PR.
-6. Wait a few minutes (perhaps 10) for Argo to pick up the change to Phalanx.
+6. Wait a few minutes (perhaps 2) for Argo to pick up the change to Phalanx.
 7. Log in to Argo CD.
 8. Navigate to the 'alert-stream-broker' application.
 9. Click 'sync' and leave all the defaults to sync your changes, creating the new topic.
@@ -487,20 +591,6 @@ Verify that the change worked by using Kowl and going to the "Topics" section (s
 There should be a new topic created.
 
 To let users read from the topic, see :ref:`grant_access_to_topic`.
-
-Granting Alert DB access
-------------------------
-
-Alert DB access is governed by membership in GitHub organizations and teams.
-
-The list of permitted GitHub groups for the USDF integration environment is in the `applications/gafaelfawr/values-idfint.yaml <https://github.com/lsst-sqre/phalanx/blob/bb417e80e0d9d1148da6edccae400eec006576e1/services/gafaelfawr/values-idfint.yaml#L39-L41>`__ file in github.com/lsst-sqre/phalanx.
-
-As of this writing, that list is composed of 'lsst-sqre-square' and 'lsst-sqre-friends', so any users who wish to have access need to be added to the `"square" <https://github.com/orgs/lsst-sqre/teams/square>`__ or `"friends" <https://github.com/orgs/lsst-sqre/teams/friends>`__ teams in the lsst-sqre GitHub organization.
-
-Invite a user to join one of those groups to grant access.
-
-To change the set of permitted groups, modify the applications/gafaelfawr/values-idfint.yaml file to change the list under the ``read:alertdb`` scope.
-Then, sync the change to Gafaelfawr via Argo CD.
 
 Making Changes
 ==============
@@ -528,11 +618,10 @@ Updating the Kafka version
 --------------------------
 
 The Kafka version is set in the `alert-stream-broker/templates/kafka.yaml <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/charts/alert-stream-broker/templates/kafka.yaml>`__ file in `applications/alert-stream-broker`_.
-It is parameterized through the ``kafka.version`` value in the alert-stream-broker chart, which defaults to "3.4.0".
+It is parameterized through the ``kafka.version`` value in the alert-stream-broker chart, which defaults to "3.7.0".
 
-When upgrading the Kafka version, you also may need to update the ``kafka.logMesageFormatVersion`` and ``kafka.interBrokerProtocolVersion``.
-These change slowly, but old values can be incompatible with new Kafka versions.
-See `Strimzi documentation on Kafka Versions <https://strimzi.io/docs/operators/latest/full/deploying.html#ref-kafka-versions-str>`__ to be sure.
+See `Strimzi documentation on Kafka Versions <https://strimzi.io/docs/operators/latest/full/deploying.html#ref-kafka-versions-str>`__ to check if there are any
+other parameters which need updating when updating the Kafka version.
 
 So, to update the version of Kafka used, update the `applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml
 <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml>`__ file in `github.com/lsst-sqre/phalanx`_.
@@ -590,12 +679,7 @@ The high-level steps are to:
 Making a new alert schema
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-First, make a new subdirectory in `github.com/lsst/alert_packet`_'s `python/lsst/alert/packet/schema <https://github.com/lsst/alert_packet/tree/main/python/lsst/alert/packet/schema>`__ directory.
-For example, the current latest version as of this writing is 5.0, so there's a python/lsst/alert/packet/schema/5/0 directory which holds Avro schemas.
-You could put a new schema in python/lsst/alert/packet/schema/5/1.
-
-Start by copying the current schema into the new directory, and then make your changes.
-Then, update `python/lsst/alert/packet/schema/latest.txt <https://github.com/lsst/alert_packet/blob/main/python/lsst/alert/packet/schema/latest.txt>`__ to reference the new schema version number.
+The creation of new alert schemas is now automated. Follow the guide in `github.com/lsst/alert_packet <https://github.com/lsst/alert_packet/>`__.
 
 Creating a container which loads the schema
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -609,7 +693,7 @@ For example, if you're working on a branch named tickets/DM-34567, then the cont
 You can use this ticket-number-based container tag while doing development, but once you're sure of things, merge the PR and then tag a release.
 The release tag can be the version of the alert schema (for example "4.1") if you like - it doesn't really matter what value you pick; there are so many version numbers flying around with alert schemas that it's going to be hard to find any scheme which is ideal.
 
-To confirm that your container is working, you can run the conatiner locally.
+To confirm that your container is working, you can run the container locally.
 For example, for the "w.2022.04" tag:
 
 .. code-block:: sh
@@ -628,74 +712,24 @@ For example, for the "w.2022.04" tag:
 Loading the new schema into the schema registry
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To load the new schema into the schema registry, update the ``alert-stream-schema-registry.schemaSync.image.tag`` value to the tag that you used for the container.
-
-The defaults are set in the alert-stream-schema-registry's `values.yaml <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/charts/alert-stream-schema-registry/values.yaml>`__ file.
-You can update the defaults, or you can update the parameters used in Phalanx for a particular environment under the `alert-stream-schema-registry <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml>`__ field.
+Loading in new schemas to the registry now loads all schemas in at once. This done via the `schemaSync <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/charts/alert-stream-schema-registry/templates/sync-schema-job.yaml>`__
+job which runs whenever ArgoCD is synced. This the dependant python script lives in `alert_packet/python/lsst/alert/packet/bin/syncAllSchemasToRegistry.py <https://github.com/lsst/alert_packet/blob/6e5349ef8cf7d69f455e91db7f3b1dcf56767e2c/python/lsst/alert/packet/bin/syncAllSchemasToRegistry.py>`__.
+If changes are made to the schema sync python script, you must then update the docker image used in
+`values.yaml <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/charts/alert-stream-schema-registry/values.yaml>`__ file.
 
 Apply these changes as described in :ref:`deploying-a-change`.
 The result should be that a new schema is added to the schema registry.
 
 Once the change is deployed, the job that loads the schema will start.
 You can monitor it in the Argo UI by looking for the Job named 'sync-schema-job'.
+If you ever need to rebuild the schema registry, simply press sync again. This will delete and completely rebuild the schema
+registry, preserving the assigned schema numbers for each schema version.
 
 You can confirm it worked by using Kowl (see :ref:`running-kowl`) and using its UI for looking at the schema registry's contents.
 
-Publishing a new lsst-alert-packet Python package
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The alert stream simulator gets its version of the alert packet schema from the ``lsst-alert-packet`` Python package.
-The version of this package that it uses is set in `setup.py <https://github.com/lsst-dm/alert-stream-simulator/blob/main/setup.py#L9>`__ of `github.com/lsst-dm/alert-stream-simulator`_.
-
-You'll need to publish a new version of the lsst-alert-packet Python package in order to get a new version in alert-stream-simulator.
-
-Start by updating the version in `setup.cfg <https://github.com/lsst/alert_packet/blob/main/setup.cfg#L3>`__ of `github.com/lsst/alert_packet`_.
-Merge your change which includes the new version in setup.cfg.
-
-The new version of the package needs to be published to PyPI, the Python Package Index: https://pypi.org/project/lsst-alert-packet/.
-It is managed by a user named 'lsst-alert-packet-admin', which has credentials stored in 1Password in the RSP-Vault vault.
-Use 1Password to get the credentials for that user.
-
-Once you have credentials and have incremented the version, you're ready to publish to PyPI.
-Explaining how to do that is out of scope of this guide, but `Twine <https://twine.readthedocs.io/en/stable/>`__ is a good tool for the job.
-
-Updating the Alert Stream Simulator package
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The alert stream simulator needs to use the new version of the ``lsst-alert-packet`` version which you published to PyPI.
-Second, the chart which runs the simulator needs to be updated to use the right ID of the schema in the schema registry.
-
-The version of ``lsst-alert-packet`` is set in the `setup.py <https://github.com/lsst-dm/alert-stream-simulator/blob/main/setup.py#L9>`__ file of `github.com/lsst-dm/alert-stream-simulator`_.
-Update this to include the newly-published Python package.
-
-Once you have made and merged a PR to this, tag a new release of the alert stream simulator using :command:`git tag`.
-When your tag has been pushed to the alert stream simulator GitHub repository, an automated build will create a container (in a manner almost exactly the same as you saw for lsst/alert_packet).
-
-You can use :command:`docker run` to verify that this worked.
-For example, for version ``v1.2.1``:
-
-.. code-block:: sh
-
-    -> % docker run --rm lsstdm/alert-stream-simulator:v1.2.1 'rubin-alert-sim -h'
-    usage: rubin-alert-sim [-h] [-v] [-d]
-                           {create-stream,play-stream,print-stream} ...
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      -v, --verbose         enable info-level logging (default: False)
-      -d, --debug           enable debug-level logging (default: False)
-
-    subcommands:
-      {create-stream,play-stream,print-stream}
-        create-stream       create a stream dataset to be run through the
-                            simulation.
-        play-stream         play back a stream that has already been created
-        print-stream        print the size of messages in the stream in real time
-
-
 
 Schema Registry Ids
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 Schema ids are determined by the schema version number. Ids are assigned using the major number and assigning the minor number
 to a 00 format. For example, schema version 7.1 will be schema id number 701. Schema 13.12 would be schema 1312 and so forth.
@@ -712,76 +746,12 @@ Select the desired version.
 
 At the top of the screen, you should see the "Schema ID" of the schema you have selected.
 
-Updating the Alert Stream Simulator values
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-You're almost done.
-We need to update the alert stream simulator deployment to use the new container version, and to use the new schema ID.
-
-The container version is set in `values-usdfdev-alert-stream-broker.yaml's alert-stream-simulator.image.tag <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/values-usdfdev-alert-stream-broker.yaml#L122>`__ field.
-Update this to match the tag you used in github.com/lsst-dm/alert-stream-simulator.
-
-The schema ID can be set in values-usdfdev-alert-stream-broker.yaml as well, under ``alert-stream-simulator.schemaID``.
-This is set to ``1`` by default.
-
-Those changes to values-usdfdev-alert-stream-broker.yaml are half the story.
-You probably also should update the defaults, which is done by editing the `values.yaml <https://github.com/lsst-sqre/phalanx/blob/main/applications/alert-stream-broker/charts/alert-stream-simulator/values.yaml>`__ files in the alert-stream-simulator chart.
-This values.yaml changes the dynamic configurations on a topic level, which override any settings, such as retention.ms or retention.bytes set on a broker level.
-
-Once you have made those changes, apply them following the instructions in :ref:`deploying-a-change`.
-
-The new simulator make take a few minutes to come online as the data needs to be reloaded.
-Once the sync has completed, you can verify that the change worked.
-
-Verify that it worked using Kowl (see :ref:`running-kowl`) by looking at the `Messages UI <http://localhost:8080/topics/alerts-simulated?o=-3&p=-1&q&s=50#messages>`__ (keep in mind that it can take up to 37 seconds for messages to appear!).
-The mesages should be encoded using your new schema.
-
-.. warning::
-
-   You probably want to change the sample alert data (see :ref:`changing-sample-alert-data`) used by the alert stream simulator.
-
-   If you don't do this, then the alert packets will be decoded using the version used when sample alerts were generated, then *re-encoded* using the new alert schema.
-
-   You can manage this transition using Avro's `aliases <https://avro.apache.org/docs/current/spec.html#Aliases>`__, but it might be simpler to simultaneously switch to a new version of the sample alert data.
-
-.. _changing-sample-alert-data:
-
-Changing the sample alert data
-------------------------------
-
-The sample alert data used by the alert stream simulator is set in a Makefile:
-
-.. code-block:: make
-
-    .PHONY: datasets
-    datasets: data/rubin_single_ccd_sample.avro data/rubin_single_visit_sample.avro
-
-    data:
-            mkdir -p data
-
-    data/rubin_single_ccd_sample.avro: data
-            wget --no-verbose --output-document data/rubin_single_ccd_sample.avro https://lsst.ncsa.illinois.edu/~ebellm/sample_precursor_alerts/latest_single_ccd_sample.avro
-
-    data/rubin_single_visit_sample.avro: data
-            wget --no-verbose --output-document data/rubin_single_visit_sample.avro https://lsst.ncsa.illinois.edu/~ebellm/sample_precursor_alerts/latest_single_visit_sample.avro
-
-The last two show what's happening.
-The sample alerts are downloaded from https://lsst.ncsa.illinois.edu/~ebellm/sample_precursor_alerts/latest_single_visit_sample.avro.
-
-The sample alerts could be retrieved from anywhere else.
-The important things are that they should be encoded in Avro Object Container File format (that is, with all alerts in one file, preceded by a single instance of the Avro schema), and that they should represent a single visit of alert packet data.
-
-Make changes to the makefile to get data from somewhere else, and then merge your changes.
-Make a git tag using the format ``vX.Y.Z``, for example ``v1.3.10``, and push that git tag up.
-This will trigger a build job for the container using the new tag.
-
-Next, copy that tag into `charts/alert-stream-simulator/values.yaml <https://github.com/lsst-sqre/charts/blob/aa8f4db9a8844d94407b492dac14b56014cecd02/charts/alert-stream-simulator/values.yaml#L35>`__, and follow the instructions from :ref:`deploying-a-change`.
-This will configure the alert stream simulator to use the new alert data, publishing it every 37 seconds.
 
 Deploying on a new Kubernetes cluster on Google Kubernetes Engine
 -----------------------------------------------------------------
 
-Deploying on a new Kubernetes cluster will take a lot of steps, and has not been done before, so this section is somewhat speculative.
+Deploying on a new Kubernetes cluster will take a lot of steps, and has not been done this way. This section is a speculative section
+that is not relevant to USDF deployment, however shall be kept for posterity.
 
 Prerequisites
 ~~~~~~~~~~~~~
@@ -895,7 +865,7 @@ Provision the DNS for the schema registry
 
 DNS is provisioned by the SQuARE team, so you'll have to make requests to them for this part.
 
-The target environment is running Gafaelfawr, so it has some base IP address used for the main ingress.
+The target environment is running Gafaelfawr, so it has some base IP addresses used for the main ingress.
 The schema registry can run on the same IP address, even though it uses a different hostname.
 
 So, request a DNS A record which points to the base IP of the targeted environment's main ingress.
@@ -915,7 +885,7 @@ You must explicitly set a hostname for the schema registry (in ``alert-stream-sc
 Use the one you provisioned in the previous step.
 
 
-You will also need to explicitly pass in the alert database GCP project and bucket names.
+You will also need to explicitly pass in the alert database AWS bucket names.
 Be careful to set the fields of the alert database to the right values that match what you created in Terraform.
 
 Finally, make sure to not set the ``alert-stream-broker.kafka.externalListener`` field yet.
@@ -925,7 +895,8 @@ You will similarly need to configure the ``values-<environment>.yaml`` file for 
 
 You will also need to enable the ``alert_stream_broker``, ``strimzi``, and ``strimzi_registry_operator`` applications in the ``science-platform/values-<environment>.yaml`` file.
 For example, see the `science-platform/values-idfint.yaml <https://github.com/lsst-sqre/phalanx/blob/master/science-platform/values-idfint.yaml>`__ file, which has ``enabled: true`` for those three apllications.
-You need to do that for your target environment as well.
+You need to do that for your target environment as well. When deploying, you specifically want an alert-stream version of the science
+platform, as the only dependencies are ``gafaelfawr``, ``postgress``, and ``support``.
 
 Enabling the new services in Argo
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -955,7 +926,7 @@ In  the current gcloud setup, this must be done through Square. If you cannot us
 request that you are assigned six for the Kafka brokers, and that the DNS records are updated to point to the correct
 static IPs.
 
-You will then need to update ``values-idfint.yaml``:
+You will then need to update ``values-usdfdev-alert-stream-broker.yaml``:
 
 .. code-block::
 
@@ -964,21 +935,47 @@ You will then need to update ``values-idfint.yaml``:
         name: "alert-broker"
 
       kafka:
-        # Addresses based on the state as of 2022-11-06; these were assigned by
+        # Addresses based on the state as of 2023; these were assigned by
         # Square and now we're pinning them.
         externalListener:
           tls:
-            enabled: true
+            enabled: false
           bootstrap:
-            ip: 35.224.176.103
-            host: alert-stream-int.lsst.cloud
+            host: usdf-alert-stream-dev.lsst.cloud
+            ip: "134.79.23.185"
+            annotations:
+              metallb.universe.tf/address-pool: 'sdf-dmz'
           brokers:
-            - ip: "34.28.80.188"
-            host: alert-stream-int-broker-0.lsst.cloud
-            - ip: "35.188.136.140"
-            host: alert-stream-int-broker-1.lsst.cloud
-            - ip: "35.238.84.221"
-            host: alert-stream-int-broker-2.lsst.cloud
+            - host: usdf-alert-stream-dev-broker-0.lsst.cloud
+              ip: "134.79.23.214"
+              broker: 6
+              annotations:
+                metallb.universe.tf/address-pool: 'sdf-dmz'
+            - host: usdf-alert-stream-dev-broker-1.lsst.cloud
+              ip: "134.79.23.216"
+              broker: 7
+              annotations:
+                metallb.universe.tf/address-pool: 'sdf-dmz'
+            - host: usdf-alert-stream-dev-broker-2.lsst.cloud
+              ip: "134.79.23.218"
+              broker: 8
+              annotations:
+                metallb.universe.tf/address-pool: 'sdf-dmz'
+            - host: usdf-alert-stream-dev-broker-3.lsst.cloud
+              ip: "134.79.23.220"
+              broker: 9
+              annotations:
+                metallb.universe.tf/address-pool: 'sdf-dmz'
+            - host: usdf-alert-stream-dev-broker-4.lsst.cloud
+              ip: "134.79.23.217"
+              broker: 10
+              annotations:
+                metallb.universe.tf/address-pool: 'sdf-dmz'
+            - host: usdf-alert-stream-dev-broker-5.lsst.cloud
+              ip: "134.79.23.219"
+              broker: 11
+              annotations:
+                metallb.universe.tf/address-pool: 'sdf-dmz'
 
 
 
@@ -1024,7 +1021,7 @@ Use it to discover the IP addresses for each of the individual broker hosts, and
 Request DNS A records that map useful hostnames to these IP addresses - this is done by the SQuARE team, so you'll need help.
 
 Once you have DNS provisioned, make another change to ``values-<environment>.yaml`` to lock in the IP addresses and inform Kafka of the hostnames to use.
-For example, here's ``values-idfint.yaml``:
+At USDF, we use ``values-usdfdev-alert-stream-broker.yaml``.
 
 Apply this change as usual (see :ref:`deploying-a-change`).
 Now the broker *should* be accessible.
@@ -1040,6 +1037,7 @@ In addition, make a user named 'kafka-admin' in 1Password in the same way.
 Make sure to use the right value for the ``environment`` field of the 1Password items.
 
 Then, set ``alert-stream-broker.vaultSecretsPath`` in ``values-<environment>.yaml`` to ``secret/k8s_oeprator/<environment>/alert-stream-broker``. This will configure the Vault Secrets Operator to correctly feed secrets through.
+If you need to manually set the credentials, this can be done via command line vault access at USDF.
 
 Lingering issues
 ~~~~~~~~~~~~~~~~
@@ -1056,10 +1054,10 @@ Testing connectivity
 You should now have a working cluster.
 You should be able to run Kowl with the new superuser identity and it ought to be able to connect.
 
-Deploying on a new Kubernetes cluster off of Google
----------------------------------------------------
+Deploying on a new Kubernetes cluster
+-------------------------------------
 
-Deploying to a new Kubernetes cluster off of Google will require all the same steps as described in the previous section, but with a few additional wrinkles.
+Deploying to a new Kubernetes cluster at USDF will require all the same steps as described in the previous section, but with a few additional wrinkles.
 
 First, the alert-stream-broker chart uses the "load balancer" service type to provide external internet access to the Kafka nodes.
 Load balancer services are very platform-specific; on Google it corresponds to creation of TCP Load Balancers.
@@ -1069,8 +1067,7 @@ One option would be to use the targeted platform's load balancers.
 Another option is to use Node Ports or Ingresses instead.
 The 5-part Strimzi blog post series "`Accessing Kafka <https://strimzi.io/blog/2019/04/17/accessing-kafka-part-1/>`__" goes into detail about these options.
 
-Second, the alert database uses Google Cloud Storage buckets to store raw alert and schema data.
-This would need to be replaced with something appropriate for the targeted environment.
+Second, the alert database uses AWS S3 Storage buckets to store raw alert and schema data.
 The requirements are made clear in the ``storage.py`` files of the `github.com/lsst-dm/alert_database_ingester`_ and `github.com/lsst-dm/alert_database_server`_ repositories.
 An implementation would need to fulfill the abstract interface provided in that file.
 
@@ -1107,6 +1104,11 @@ This path prefix is controlled by a value passed in to the alert database chart.
 
 Changing the Kafka hardware
 ---------------------------
+
+Kafka hardware is managed by other administrators at USDF. If any changes need to be made, please make requests on the
+`usdf-infra-support` slack channel.
+
+If you are hosting an alert stream service locally, the following is relevant information.
 
 To change the hardware used by Kafka, change the nodes used in the node pool.
 This is set in the terraform configuration in `environment/deployments/science-platform/env/integration-gke.tfvars <https://github.com/lsst/idf_deploy/blob/main/environment/deployments/science-platform/env/integration-gke.tfvars#L48-L64>`__:
@@ -1145,6 +1147,7 @@ If all of the brokers have failed but everything else is running, the brokers ma
 This means that Kafka needs to have either the storage allotted or the retention limits adjusted. This requires a restart
 of the brokers, and may require a full re-deployment of the whole system.
 
+If you are fully restarting the Alert Broker, you may need to comment out the external load balancer and broker IP's.
 If you are fully restarting the Alert Broker, you may need to comment out the external load balancer and broker IP's.
 Comment out all of the code starting from the lines pictured below through the rest of the code block. This needs
 to be done in both `kafka.yaml`_ and `values-usdfdev-alert-stream-broker.yaml`_. Once the pods are up and running, uncomment the code so that
