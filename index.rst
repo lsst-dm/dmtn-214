@@ -197,10 +197,21 @@ For example:
 .. figure:: /_static/kowl_messages.png
    :name: Kowl Messages UI
 
+Additionaly, if you click the configurations tab, you can see which configuration values have been changed. These changes
+are PER topic, and override the global broker configurations.
+
 You can also look at the schema and its versions in the Schema Registry tab:
 
 .. figure:: /_static/kowl_schemas.png
    :name: Kowl Schemas UI
+
+If you have made any changes to the Kafka broker's configuration, you can check that on the Broker tab.
+It should look something like the following:
+
+Anything that is not greyed out is a custom change to the configurations. You can use this to confirm any changes you =have made.
+
+.. figure:: /_static/kowl_broker_config.png
+   :name: Kowl Broker UI
 
 You can use the Consumer Groups tab to see the position of any consumers.
 For example, here we can see the Pitt-Google broker:
