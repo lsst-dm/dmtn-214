@@ -649,15 +649,13 @@ The version of this package that it uses is set in `setup.py <https://github.com
 
 You'll need to publish a new version of the lsst-alert-packet Python package in order to get a new version in alert-stream-simulator.
 
-Start by updating the version in `setup.cfg <https://github.com/lsst/alert_packet/blob/main/setup.cfg#L3>`__ of `github.com/lsst/alert_packet`_.
-Merge your change which includes the new version in setup.cfg.
-
 The new version of the package needs to be published to PyPI, the Python Package Index: https://pypi.org/project/lsst-alert-packet/.
-It is managed by a user named 'lsst-alert-packet-admin', which has credentials stored in 1Password in the RSP-Vault vault.
+It can be managed by a user named 'lsst-alert-packet-admin', which has credentials stored in 1Password in the RSP-Vault vault.
 Use 1Password to get the credentials for that user.
+The DM user 'rubinlsstdm' is also a maintainer for this package.
 
-Once you have credentials and have incremented the version, you're ready to publish to PyPI.
-Explaining how to do that is out of scope of this guide, but `Twine <https://twine.readthedocs.io/en/stable/>`__ is a good tool for the job.
+We use a `Github action <https://github.com/lsst/alert_packet/blob/main/.github/workflows/build.yaml>`_ to automatically assign version numbers and upload to PyPI.
+New versions are created for each weekly and for Github tags, so if a version is needed prior to a weekly it would be appropriate to create a new tag.
 
 Updating the Alert Stream Simulator package
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
