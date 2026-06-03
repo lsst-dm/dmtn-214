@@ -580,8 +580,8 @@ Granting users read-only access to a new topic
 ----------------------------------------------
 
 1. Make a change to `github.com/lsst-sqre/phalanx`_'s ``applications/sasquatch/values-usdfprod-prompt-processing.yaml`` file.
-   In the list of topics under  ``communityReadonlyTopics``, add the new topic. This will give all users who are assigned to *communityReadonlyTopics
-access to the new topic.
+   In the list of topics under  ``communityReadonlyTopics``, add the new topic. This will give all users who are assigned to \*communityReadonlyTopics
+   access to the new topic.
 2. Make a pull request with your changes, and make sure it passes automated checks, and get it reviewed.
 3. Merge your PR.
 4. Log in to Argo CD.
@@ -602,12 +602,13 @@ Adding a new Kafka topic
    be read by the consumers.
 
 .. code-block::
-     topics:
-    - name: lsst-alerts-v11
-      partitions: 45
-      replicas: 3
-      bytesRetained: "300000000000"
-      millisecondsRetained: "2629740000"
+
+   topics:
+   - name: lsst-alerts-v11
+     partitions: 45
+     replicas: 3
+     bytesRetained: "300000000000"
+     millisecondsRetained: "2629740000"
 
 3. Make a pull request with your changes to ``sasquatch/values-usdf(prod/dev)-prompt-processing.yaml``, and make sure it passes automated checks, and get it reviewed.
    Merge your PR.
