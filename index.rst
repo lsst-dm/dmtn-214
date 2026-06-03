@@ -209,7 +209,7 @@ It should look something like the following:
 
 You can use this to confirm any changes you have made, though not all fields are visible.
 
-.. figure:: /_static/kafka_broker_config.png
+.. figure:: /_static/kafbat_broker_config.png
    :name: Kafbat Broker UI
 
 You can use the Consumer Groups tab to see the position of any consumers.
@@ -217,6 +217,11 @@ For example, here we can see the Pitt-Google broker:
 
 .. figure:: /_static/kafbat_consumers.png
    :name: Kafbat Consumer Groups UI
+
+Additionally, you cn look at the Access Control List (ACL) via the ACL dashboard.
+
+.. figure:: /_static/kafbat_acl.png
+   :name: Kafbat ACL UI
 
 Kafbat has many more capabilities.
 See the official Kafbat documentation :cite:`kafbat` for more.
