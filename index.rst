@@ -258,7 +258,6 @@ You should now have ``kubectl`` access. Try :command:`kubectl get deployments --
 NAME                            READY   UP-TO-DATE   AVAILABLE   AGE
 alert-database-ingester-1.0.0   1/1     1            1           18d
 kafbat                          1/1     1            1           19d
-redpanda-console                1/1     1            1           100d
 sasquatch-cruise-control        1/1     1            1           106d
 sasquatch-entity-operator       1/1     1            1           106d
 sasquatch-kafka-exporter        1/1     1            1           78d
@@ -272,21 +271,22 @@ You can also try :command:`kubectl get pods --namespace sasquatch` as well. It w
 NAME                                             READY   STATUS    RESTARTS   AGE
 alert-database-ingester-1.0.0-696f6c6dfd-t2dkt   1/1     Running   0          11d
 kafbat-64f7d6cfbd-btdxv                          1/1     Running   0          14d
-redpanda-console-5857b5f449-jgjb4                1/1     Running   0          14d
 sasquatch-controller-0                           1/1     Running   0          12d
 sasquatch-controller-1                           1/1     Running   0          9d
 sasquatch-controller-2                           1/1     Running   0          9d
+sasquatch-controller-3                           1/1     Running   0          9d
+sasquatch-controller-4                           1/1     Running   0          9d
 sasquatch-cruise-control-86ddd5f995-b57k2        1/1     Running   0          11d
 sasquatch-entity-operator-67dd678579-vbfkv       2/2     Running   0          9d
-sasquatch-kafka-3                                1/1     Running   0          12d
-sasquatch-kafka-4                                1/1     Running   0          13d
-sasquatch-kafka-5                                1/1     Running   0          9d
-sasquatch-kafka-6                                1/1     Running   0          11d
-sasquatch-kafka-7                                1/1     Running   0          11d
+sasquatch-kafka-5                                1/1     Running   0          12d
+sasquatch-kafka-6                                1/1     Running   0          13d
+sasquatch-kafka-7                                1/1     Running   0          9d
+sasquatch-kafka-8                                1/1     Running   0          11d
+sasquatch-kafka-9                                1/1     Running   0          11d
 sasquatch-kafka-exporter-6c7f5b4987-w9wq2        1/1     Running   0          11d
 sasquatch-schema-registry-56f455c476-8wm8d       1/1     Running   0          11d
 
-Here, the controllers 0-2 and the kafka instances 3-7 are what you want to see.
+Here, the controllers 0-4 and the kafka instances 5-9 are what you want to see.
 
 
 .. _kafbat-access:
@@ -357,18 +357,16 @@ Next, check how much is requested in the persistent volume claims used by the Ka
 
       -> % kubectl get pvc -n sasquatch
         NAME                               STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS        VOLUMEATTRIBUTESCLASS   AGE
-        data-0-alert-broker-controller-0   Bound    pvc-7ec41769-3643-40ef-8bcb-0aa0f377e093   20Gi       RWO            wekafs--sdf-k8s01   <unset>                 22h
-        data-0-alert-broker-controller-1   Bound    pvc-a3102c54-2bb5-4f68-b4d0-921cce2cd57a   20Gi       RWO            wekafs--sdf-k8s01   <unset>                 22h
-        data-0-alert-broker-controller-2   Bound    pvc-9c85d80c-b5a6-4d81-a95d-c2b734e9429e   20Gi       RWO            wekafs--sdf-k8s01   <unset>                 22h
-        data-0-alert-broker-controller-3   Bound    pvc-3aa61263-dd82-4890-8bab-b038b154a845   20Gi       RWO            wekafs--sdf-k8s01   <unset>                 22h
-        data-0-alert-broker-controller-4   Bound    pvc-f42e1031-903d-4923-8c6f-b4b91f6e6a0b   20Gi       RWO            wekafs--sdf-k8s01   <unset>                 22h
-        data-0-alert-broker-controller-5   Bound    pvc-737b03a7-144e-4371-9c98-352870afe070   20Gi       RWO            wekafs--sdf-k8s01   <unset>                 22h
-        data-0-alert-broker-kafka-10       Bound    pvc-ce20e21b-4e04-419f-bf03-fea6b0ff10ca   2500Gi     RWO            wekafs--sdf-k8s01   <unset>                 22h
-        data-0-alert-broker-kafka-11       Bound    pvc-e52f5109-7fac-4a37-a505-2f0c624696e4   2500Gi     RWO            wekafs--sdf-k8s01   <unset>                 22h
-        data-0-alert-broker-kafka-6        Bound    pvc-7b59f3ad-e6d3-4063-87ae-b2b2732c93af   2500Gi     RWO            wekafs--sdf-k8s01   <unset>                 22h
-        data-0-alert-broker-kafka-7        Bound    pvc-1d9bdef8-e524-41ad-8cf0-12db3c9ea101   2500Gi     RWO            wekafs--sdf-k8s01   <unset>                 22h
-        data-0-alert-broker-kafka-8        Bound    pvc-be557069-a4bb-4def-abf1-5a386535b616   2500Gi     RWO            wekafs--sdf-k8s01   <unset>                 22h
-        data-0-alert-broker-kafka-9        Bound    pvc-218f52f6-b7b2-4948-97cc-2792fd1e8dfb   2500Gi     RWO            wekafs--sdf-k8s01   <unset>                 22h
+        data-0-sasquatch-controller-0      Bound    pvc-7ec41769-3643-40ef-8bcb-0aa0f377e093   100Gi      RWO            wekafs--sdf-k8s01   <unset>                 30d
+        data-0-sasquatch-controller-1      Bound    pvc-a3102c54-2bb5-4f68-b4d0-921cce2cd57a   100Gi      RWO            wekafs--sdf-k8s01   <unset>                 30d
+        data-0-sasquatch-controller-2      Bound    pvc-9c85d80c-b5a6-4d81-a95d-c2b734e9429e   100Gi      RWO            wekafs--sdf-k8s01   <unset>                 30d
+        data-0-sasquatch-controller-3      Bound    pvc-3aa61263-dd82-4890-8bab-b038b154a845   100Gi      RWO            wekafs--sdf-k8s01   <unset>                 30d
+        data-0-sasquatch-controller-4      Bound    pvc-f42e1031-903d-4923-8c6f-b4b91f6e6a0b   100Gi      RWO            wekafs--sdf-k8s01   <unset>                 30d
+        data-0-sasquatch-kafka-5           Bound    pvc-737b03a7-144e-4371-9c98-352870afe070   35Ti       RWO            wekafs--sdf-k8s01   <unset>                 30d
+        data-0-sasquatch-kafka-6           Bound    pvc-7b59f3ad-e6d3-4063-87ae-b2b2732c93af   35Ti       RWO            wekafs--sdf-k8s01   <unset>                 30d
+        data-0-sasquatch-kafka-7           Bound    pvc-1d9bdef8-e524-41ad-8cf0-12db3c9ea101   35Ti       RWO            wekafs--sdf-k8s01   <unset>                 30d
+        data-0-sasquatch-kafka-8           Bound    pvc-be557069-a4bb-4def-abf1-5a386535b616   35Ti       RWO            wekafs--sdf-k8s01   <unset>                 30d
+        data-0-sasquatch-kafka-9           Bound    pvc-218f52f6-b7b2-4948-97cc-2792fd1e8dfb   35Ti       RWO            wekafs--sdf-k8s01   <unset>                 30d
 
 
 Checking consumer group status
@@ -379,7 +377,7 @@ Checking consumer group status
 
 There should be an entry for each consumer group that is connected or has connected recently.
 
-The "Coordinator" column indicates which of the three Kafka broker nodes is used for coordinating the group's partition ownership.
+The "Coordinator" column indicates which of the Kafka broker nodes is used for coordinating the group's partition ownership.
 
 The "Members" column indicates the number of currently-active processes which are consuming data.
 
@@ -470,9 +468,9 @@ To use s3 and s3api, you need to have the above AWS credentials loaded into your
 
     .. code-block::
 
-        alias s3="singularity exec /sdf/sw/s3/aws-cli_latest.sif aws --endpoint-url https://sdfembs3.sdf.slac.stanford.edu/ s3"
+        alias s3="singularity exec /sdf/sw/s3/aws-cli_latest.sif aws --endpoint-url https://sdfdatas3.slac.stanford.edu/ s3"
 
-        alias s3api='singularity exec /sdf/sw/s3/aws-cli_latest.sif aws --endpoint-url https://sdfembs3.sdf.slac.stanford.edu/ s3api'
+        alias s3api='singularity exec /sdf/sw/s3/aws-cli_latest.sif aws --endpoint-url https://sdfdatas3.slac.stanford.edu/ s3api'
 
 
 Administration
@@ -735,14 +733,14 @@ You can use this ticket-number-based container tag while doing development, but 
 The release tag can be the version of the alert schema (for example "4.1") if you like - it doesn't really matter what value you pick; there are so many version numbers flying around with alert schemas that it's going to be hard to find any scheme which is ideal.
 
 To confirm that your container is working, you can run the container locally.
-For example, for the "w.2022.04" tag:
+For example, for the "w.2026.19" tag:
 
 .. code-block:: sh
 
-    -> % docker run --rm lsstdm/lsst_alert_packet:w.2022.04 'syncLatestSchemaToRegistry.py --help'
-    usage: syncLatestSchemaToRegistry.py [-h]
-                                         [--schema-registry-url SCHEMA_REGISTRY_URL]
-                                         [--subject SUBJECT]
+    -> % docker run --rm lsstdm/lsst_alert_packet:w.2026.19 'syncAllSchemasToRegistry --help'
+    usage: syncAllSchemasToRegistry [-h]
+                                    [--schema-registry-url SCHEMA_REGISTRY_URL]
+                                    [--subject SUBJECT]
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -813,59 +811,51 @@ Provisioning DNS records
 The alert stream and the alert schema registry both need static IP's assigned.
 
 This must be done through Square. If you cannot use the existing static IPs, you must
-request that you are assigned six for the Kafka brokers, and that the DNS records are updated to point to the correct
-static IPs.
+request that you are assigned one per Kafka broker (currently five), plus one for the bootstrap, and that the DNS records
+are updated to point to the correct static IPs.
 
-You will then need to update ``values-usdfprod-prompt-processing.yaml``:
+You will then need to update ``values-usdfprod-prompt-processing.yaml``. The external listener configuration
+lives under ``strimzi-kafka.kafka.externalListener``:
 
-.. code-block::
+.. code-block:: yaml
 
-    alert-stream-broker:
-      cluster:
-        name: "alert-broker"
-
+    strimzi-kafka:
       kafka:
-        # Addresses based on the state as of 2023; these were assigned by
-        # Square and now we're pinning them.
         externalListener:
           tls:
             enabled: false
           bootstrap:
-            host: usdf-alert-stream-dev.lsst.cloud
-            ip: "134.79.23.185"
+            host: rubin-alert-stream-bootstrap.slac.stanford.edu
             annotations:
-              metallb.universe.tf/address-pool: 'sdf-dmz'
+              metallb.io/address-pool: sdf-dmz
+              metallb.io/loadBalancerIPs: 134.79.23.209
+            allocateLoadBalancerNodePorts: false
           brokers:
-            - host: usdf-alert-stream-dev-broker-0.lsst.cloud
-              ip: "134.79.23.214"
-              broker: 6
+            - broker: 5
+              host: rubin-alert-stream-broker-5.slac.stanford.edu
               annotations:
-                metallb.universe.tf/address-pool: 'sdf-dmz'
-            - host: usdf-alert-stream-dev-broker-1.lsst.cloud
-              ip: "134.79.23.216"
-              broker: 7
+                metallb.io/address-pool: sdf-dmz
+                metallb.io/loadBalancerIPs: 134.79.23.212
+            - broker: 6
+              host: rubin-alert-stream-broker-6.slac.stanford.edu
               annotations:
-                metallb.universe.tf/address-pool: 'sdf-dmz'
-            - host: usdf-alert-stream-dev-broker-2.lsst.cloud
-              ip: "134.79.23.218"
-              broker: 8
+                metallb.io/address-pool: sdf-dmz
+                metallb.io/loadBalancerIPs: 134.79.23.213
+            - broker: 7
+              host: rubin-alert-stream-broker-7.slac.stanford.edu
               annotations:
-                metallb.universe.tf/address-pool: 'sdf-dmz'
-            - host: usdf-alert-stream-dev-broker-3.lsst.cloud
-              ip: "134.79.23.220"
-              broker: 9
+                metallb.io/address-pool: sdf-dmz
+                metallb.io/loadBalancerIPs: 134.79.23.215
+            - broker: 8
+              host: rubin-alert-stream-broker-8.slac.stanford.edu
               annotations:
-                metallb.universe.tf/address-pool: 'sdf-dmz'
-            - host: usdf-alert-stream-dev-broker-4.lsst.cloud
-              ip: "134.79.23.217"
-              broker: 10
+                metallb.io/address-pool: sdf-dmz
+                metallb.io/loadBalancerIPs: 134.79.23.210
+            - broker: 9
+              host: rubin-alert-stream-broker-9.slac.stanford.edu
               annotations:
-                metallb.universe.tf/address-pool: 'sdf-dmz'
-            - host: usdf-alert-stream-dev-broker-5.lsst.cloud
-              ip: "134.79.23.219"
-              broker: 11
-              annotations:
-                metallb.universe.tf/address-pool: 'sdf-dmz'
+                metallb.io/address-pool: sdf-dmz
+                metallb.io/loadBalancerIPs: 134.79.23.211
 
 
 
@@ -894,7 +884,7 @@ In addition, make a user named 'kafka-admin' in 1Password in the same way.
 
 Make sure to use the right value for the ``environment`` field of the 1Password items.
 
-Then, set ``alert-stream-broker.vaultSecretsPath`` in ``values-<environment>.yaml`` to ``secret/k8s_oeprator/<environment>/alert-stream-broker``. This will configure the Vault Secrets Operator to correctly feed secrets through.
+Then, set ``alert-stream-broker.vaultSecretsPath`` in ``values-<environment>.yaml`` to ``secret/k8s_operator/<environment>/alert-stream-broker``. This will configure the Vault Secrets Operator to correctly feed secrets through.
 If you need to manually set the credentials, this can be done via command line vault access at USDF.
 
 Lingering issues
@@ -961,37 +951,7 @@ Changing the Kafka hardware
 ---------------------------
 
 Kafka hardware is managed by other administrators at USDF. If any changes need to be made, please make requests on the
-`usdf-infra-support` slack channel.
-
-If you are hosting an alert stream service locally, the following is relevant information.
-
-To change the hardware used by Kafka, change the nodes used in the node pool.
-This is set in the terraform configuration in `environment/deployments/science-platform/env/integration-gke.tfvars <https://github.com/lsst/idf_deploy/blob/main/environment/deployments/science-platform/env/integration-gke.tfvars#L48-L64>`__:
-
-.. code-block:: terraform
-
-  {
-    name = "kafka-pool"
-    machine_type = "n2-standard-32"
-    node_locations     = "us-central1-b"
-    local_ssd_count    = 0
-    auto_repair        = true
-    auto_upgrade       = true
-    preemptible        = false
-    image_type         = "cos_containerd"
-    enable_secure_boot = true
-    disk_size_gb       = "500"
-    disk_type          = "pd-standard"
-    autoscaling        = true
-    initial_node_count = 1
-    min_count          = 1
-    max_count          = 10
-  }
-
-
-Change this, and apply the terraform change.
-
-This may cause some downtime as the kafka nodes are terminated and replaced with new ones, evicting the Kafka brokers, but this isn't known for certain.
+``#usdf-infra-support`` Slack channel.
 
 .. _troubleshooting:
 
@@ -1054,8 +1014,9 @@ schema registry looks like this:
 .. figure:: /_static/argocd_schema_registry.png
    :name: Fully Deployed Schema Registry
 
-If it does not, follow the steps listed above. The sync schema job will still fail after this, as the alert-schema-registry
-application currently defaults to forward compatibility. This will need to be changed to none.
+If it does not, follow the steps listed above. If the sync schema job still fails, check that the schema registry's
+compatibility level is set to ``none``. The chart defaults to ``none``, but if upgrading from an older installation
+the registry may still be set to forward compatibility. This can be verified and changed via Kafbat's schema registry view.
 
 .. figure:: /_static/argocd_deployed_registry.png
    :name: Deployed Schema Registry
@@ -1072,7 +1033,6 @@ a log, you can check the strimzi operator pod within the strimzi application in 
 information there.
 
 .. _github.com/lsst-sqre/phalanx: https://github.com/lsst-sqre/phalanx
-.. _github.com/lsst/idf_deploy: https://github.com/lsst/idf_deploy
 .. _github.com/lsst/alert_packet: https://github.com/lsst/alert_packet
 .. _packageAlerts.py: https://github.com/lsst/ap_association/blob/main/python/lsst/ap/association/packageAlerts.py
 .. _lsst/alert/packet/schema: https://github.com/lsst/alert_packet/tree/main/python/lsst/alert/packet/schema
