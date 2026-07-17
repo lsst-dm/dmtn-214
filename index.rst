@@ -64,7 +64,7 @@ Additionally, some resources may not update properly if they
 depend on updates in other applications. These may require you to delete that specific resources and then re-deploy.
 Always test first on dev before making changes to prod.
 
-The recommended deployment order for easy troubleshooting is:
+The recommended deployment order for easy troubleshooting when deploying from scratch is:
 
 1. Deploy the controller nodepool.
 2. Deploy the kafka nodepool. Note: Both will be empty until Kafka is deployed
@@ -72,6 +72,7 @@ The recommended deployment order for easy troubleshooting is:
 4. Deploy the schema registry
 5. Deploy the ingress schema for the schema registry
 6. Deploy other services
+7. Press the sync button again to re-sync everything and ensure the schema registry is loaded with the schemas.
 
 The strimzi schema operator is a separate application and is managed by Square.
 
@@ -94,7 +95,7 @@ Most of the sourced Helm charts are found in the `charts directory of sasquatch 
 The specific charts used are `alert-brokers <https://github.com/lsst-sqre/phalanx/tree/main/applications/sasquatch/charts/alert-brokers>`__, `alert-database <https://github.com/lsst-sqre/phalanx/tree/main/applications/sasquatch/charts/alert-database>`__, `alert-stream-schema-sync <https://github.com/lsst-sqre/phalanx/tree/main/applications/sasquatch/charts/alert-stream-schema-sync>`__, `schema-registry <https://github.com/lsst-sqre/phalanx/tree/main/applications/sasquatch/charts/schema-registry>`__, `strimzi-kafka <https://github.com/lsst-sqre/phalanx/tree/main/applications/sasquatch/charts/strimzi-kafka>`__, and `kafbat <https://github.com/lsst-sqre/phalanx/tree/main/applications/sasquatch/charts/kafbat>`__. These charts
 are described in more complete detail in DMTN-210. :cite:`DMTN-210`
 
-Argo is sometimes a little bit delayed from the state of the Phalanx repository, perhaps by a few minutes.
+Argo is sometimes a little bit delayed from the state of the Phalanx repository.
 You might want to refresh a few times and make sure that the Git reference listed under "Current Sync Status" on the Argo UI for an application matches what you expect to apply.
 
 .. _Phalanx repository: https://github.com/lsst-sqre/phalanx
@@ -154,6 +155,9 @@ If you need to reconfigure any credentials, use the following command:
             OR
 
             vault kv patch secret/rubin/usdf-prompt-processing-dev/sasquatch/ SECRET-TO-CHANGE=NEW-VALUE
+
+Keep in mind, there are two vaults, one for dev and one for prod. Make sure you update BOTH if you are making changes that
+affect both instances.
 
 
 .. _Kafbat:
@@ -267,7 +271,6 @@ You can also try :command:`kubectl get pods --namespace sasquatch` as well. It w
 
 NAME                                             READY   STATUS    RESTARTS   AGE
 alert-database-ingester-1.0.0-696f6c6dfd-t2dkt   1/1     Running   0          11d
-alert-database-server-1.0.0-7ddd8b8884-v5tkj     1/1     Running   0          9d
 kafbat-64f7d6cfbd-btdxv                          1/1     Running   0          14d
 redpanda-console-5857b5f449-jgjb4                1/1     Running   0          14d
 sasquatch-controller-0                           1/1     Running   0          12d
@@ -295,7 +298,7 @@ Kafbat Access
 and the alert archive. Kafbat is deployed
 via `Phalanx <https://github.com/lsst-sqre/phalanx/tree/main/applications/sasquatch/charts/kafbat>`__.
 
-Kafbat requires a login via SLAC, as well as configured permissions to access. MORE INFO HERE.
+Kafbat requires a login via SLAC. If you do not have access, please contact Square.
 
 
 .. _superuser-creds:
@@ -309,7 +312,7 @@ the credentials:
 
 1. Log in to 1Password in the LSST IT account.
 2. Go to the "RSP-Vault" vault.
-3. Search for "alert-stream idfint kafka-admin".
+3. Search for for the alert stream admin accounts with the 2 label. Sasquatch uses these credentials.
 
 .. _developer-creds:
 
@@ -320,7 +323,7 @@ This user only has limited permissions, mimicking those of a community broker.
 
 1. Log in to 1Password in the LSST IT account.
 2. Go to the "RSP-Vault" vault.
-3. Search for "alert-stream idfint rubin-communitybroker-idfint".
+3. Search for alert-stream and look for any credentials attributed to USDF.
 
 System Status
 =============
@@ -391,6 +394,9 @@ can be viewed in the browser or downloaded. Tiles which have logs are Pods, Depl
 In the browser, you can view the logs from the previous container restarts. You can also use keywords such as `DEBUG` or `ERROR` to search for specific
 messages within the logs via the search bar.
 
+Keep in mind, if you are looking at ingester logs, if pods are created and then expire those logs are no longer avaliable via Argo and
+you must use Loki in Grafana to view them.
+
 Checking Alert Stream status on Grafana
 ---------------------------------------
 The alert stream status, as well as metrics on alert stream consumers, topics, lag, and throughput can be found
@@ -403,8 +409,10 @@ someone with access to add you.
 Alert Archive
 =============
 
-The alert archive system consists of the `alert archive server <https://github.com/lsst-dm/alert_database_server>`__ and
-`alert archive ingester <https://github.com/lsst-dm/alert_database_ingester>`__. The ingester and server are both setup
+The alert archive system consists of frontend alert archive UI known as Herald, which is detailed in `SQR-114 <https://sqr-114.lsst.io/>`__.
+Herald is managed by Square, and questions should be directed towards their team. Alerts are
+read into the archive via the
+`alert archive ingester <https://github.com/lsst-dm/alert_database_ingester>`__. The ingester is setup
 within the alert stream system using phalanx under the `alert database charts <https://github.com/lsst-sqre/phalanx/tree/main/applications/sasquatch/charts/alert-database>`__.
 
 Alert Archive Server
