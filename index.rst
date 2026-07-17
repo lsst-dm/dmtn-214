@@ -543,9 +543,9 @@ First, generate new credentials for the user:
    d. Add a field named "generate_secrets_key".
       Set its value to "alert-stream-broker <username>-password"
    e. Add a field named "environment".
-      Set its value to "data-int.lsst.cloud"
+      Set its value to "usdfprod-prompt-processing"
 
-   If you're running in a different environment than the USDF integration environment, replaced "usdf" and "data-int.lsst.cloud" with appropriate values.
+   If you're running in a different environment than the USDF integration environment, replaced "usdf" and "usdfdev-prompt-processing" with appropriate values.
 4. Sync the secret into Vault following the instructions in `Phalanx documentation <https://phalanx.lsst.io/admin/update-a-secret.html>`__.
 
 Second, add the user to the configuration for the cluster:
@@ -554,7 +554,7 @@ Second, add the user to the configuration for the cluster:
    * Add the new user to the list of users under ``alert-stream-broker.users``: https://github.com/lsst-sqre/phalanx/blob/d3cb9b79e7fa76117cdb9039b1215a53bb5fa526/applications/sasquatch/values-usdfprod-prompt-processing.yaml#L22
    * If it is a community broker, make sure the new user is subscribed to `*communityReadonlyTopics`.
    * All topics available to the community brokers are listed under  ``communityReadonlyTopics``: https://github.com/lsst-sqre/phalanx/blob/d3cb9b79e7fa76117cdb9039b1215a53bb5fa526/applications/sasquatch/values-usdfprod-prompt-processing.yaml#L18
-   * If running in a different environment than the USDF integration environment, modify the appropriate config file, not values-usdfdev-prompt-processing.yaml.
+   * If running in a different environment than the USDF prod environment, modify the appropriate config file, not values-usdfprod-prompt-processing.yaml.
 2. Make a pull request with your changes, and make sure it passes automated checks, and get it reviewed.
 3. Merge your PR. Wait a few minutes for Argo to pickup the change.
 4. Log in to Argo CD.
@@ -782,40 +782,6 @@ The DM user 'rubinlsstdm' is also a maintainer for this package.
 We use a `Github action <https://github.com/lsst/alert_packet/blob/main/.github/workflows/build.yaml>`_ to automatically assign version numbers and upload to PyPI.
 New versions are created for each weekly and for Github tags, so if a version is needed prior to a weekly it would be appropriate to create a new tag.
 
-Updating the Alert Stream Simulator package
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The alert stream simulator needs to use the new version of the ``lsst-alert-packet`` version which you published to PyPI.
-Second, the chart which runs the simulator needs to be updated to use the right ID of the schema in the schema registry.
-
-The version of ``lsst-alert-packet`` is set in the `setup.py <https://github.com/lsst-dm/alert-stream-simulator/blob/main/setup.py#L9>`__ file of `github.com/lsst-dm/alert-stream-simulator`_.
-Update this to include the newly-published Python package.
-
-Once you have made and merged a PR to this, tag a new release of the alert stream simulator using :command:`git tag`.
-When your tag has been pushed to the alert stream simulator GitHub repository, an automated build will create a container (in a manner almost exactly the same as you saw for lsst/alert_packet).
-
-You can use :command:`docker run` to verify that this worked.
-For example, for version ``v1.2.1``:
-
-.. code-block:: sh
-
-    -> % docker run --rm lsstdm/alert-stream-simulator:v1.2.1 'rubin-alert-sim -h'
-    usage: rubin-alert-sim [-h] [-v] [-d]
-                           {create-stream,play-stream,print-stream} ...
-
-    optional arguments:
-      -h, --help            show this help message and exit
-      -v, --verbose         enable info-level logging (default: False)
-      -d, --debug           enable debug-level logging (default: False)
-
-    subcommands:
-      {create-stream,play-stream,print-stream}
-        create-stream       create a stream dataset to be run through the
-                            simulation.
-        play-stream         play back a stream that has already been created
-        print-stream        print the size of messages in the stream in real time
-
-
 
 Schema Registry Ids
 ~~~~~~~~~~~~~~~~~~~
@@ -845,9 +811,8 @@ Provisioning DNS records
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 The alert stream and the alert schema registry both need static IP's assigned.
-If for some reason
 
-In  the current gcloud setup, this must be done through Square. If you cannot use the existing static IPs, you must
+This must be done through Square. If you cannot use the existing static IPs, you must
 request that you are assigned six for the Kafka brokers, and that the DNS records are updated to point to the correct
 static IPs.
 
@@ -917,39 +882,7 @@ with a kubernetes admin and have them delete the service. This may look like the
     Failed to allocate IP for "alert-stream-broker/alert-broker-kafka-8": can't change sharing key for "alert-stream-broker/alert-broker-kafka-8",
     address also in use by vcluster--usdf-alert-stream-broker-dev/alert-broker-kafka-2-x-alert-stream-broker-x-vcluste-90c3cd7783
 
-Previous DNS provisioning workflow
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To provision the Kafka broker IPs, we will use :command:`kubectl` to look up the IP addresses provisioned for the broker (see :ref:`kubectl`).
-
-Run :command:`kubectl get service --namespace sasquatch` to get a list of all the services running:
-
-.. code-block:: sh
-
-    -> % kubectl get service  -n sasquatch
-    NAME                                    TYPE           CLUSTER-IP       EXTERNAL-IP     PORT(S)                               AGE
-    alert-broker-kafka-10                   LoadBalancer   10.108.207.210   134.79.23.217   9094:31234/TCP                                 24h
-    alert-broker-kafka-11                   LoadBalancer   10.97.120.2      134.79.23.219   9094:31858/TCP                                 24h
-    alert-broker-kafka-6                    LoadBalancer   10.96.28.225     134.79.23.214   9094:30302/TCP                                 24h
-    alert-broker-kafka-7                    LoadBalancer   10.108.145.98    134.79.23.216   9094:30747/TCP                                 24h
-    alert-broker-kafka-8                    LoadBalancer   10.108.169.180   134.79.23.218   9094:31850/TCP                                 24h
-    alert-broker-kafka-9                    LoadBalancer   10.101.139.74    134.79.23.220   9094:32476/TCP                                 24h
-    alert-broker-kafka-bootstrap            ClusterIP      10.99.56.206     <none>          9091/TCP,9092/TCP,9093/TCP                     24h
-    alert-broker-kafka-brokers              ClusterIP      None             <none>          9090/TCP,9091/TCP,8443/TCP,9092/TCP,9093/TCP   24h
-    alert-broker-kafka-external-bootstrap   LoadBalancer   10.111.167.245   134.79.23.185   9094:30280/TCP                                 24h
-    alert-schema-registry                   ClusterIP      10.104.135.221   <none>          8081/TCP                                       23h
-    alert-stream-broker-alert-database      ClusterIP      10.99.69.201     <none>          3000/TCP                                       23h                            49d
-
-
-The important column here is "EXTERNAL-IP."
-Use it to discover the IP addresses for each of the individual broker hosts, and for the "external-bootstrap" service.
-Request DNS A records that map useful hostnames to these IP addresses - this is done by the SQuARE team, so you'll need help.
-
-Once you have DNS provisioned, make another change to ``values-<environment>.yaml`` to lock in the IP addresses and inform Kafka of the hostnames to use.
-At USDF, we use ``values-usdfdev-prompt-processing.yaml``.
-
-Apply this change as usual (see :ref:`deploying-a-change`).
-Now the broker *should* be accessible.
 
 Adding users
 ~~~~~~~~~~~~
@@ -971,7 +904,8 @@ You may need to re-sync several times to trigger the data-loading job of the ale
 When the system is in its half-broken state, this job will fail, and it can exponentially back-off which can take a very long time to recover.
 It can also hit a max retry limit and stop attempting to load data.
 
-Using Argo to "sync" will kick it off again, which may fix the problem.
+Using Argo to "sync" will kick it off again, which may fix the problem. This is an uncommon issue with newer versions
+of the alert stream.
 
 Deploying on a new Kubernetes cluster
 -------------------------------------
