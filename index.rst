@@ -255,36 +255,36 @@ You should now have ``kubectl`` access. Try :command:`kubectl get deployments --
 
 .. code-block:: bash
 
-NAME                            READY   UP-TO-DATE   AVAILABLE   AGE
-alert-database-ingester-1.0.0   1/1     1            1           18d
-kafbat                          1/1     1            1           19d
-sasquatch-cruise-control        1/1     1            1           106d
-sasquatch-entity-operator       1/1     1            1           106d
-sasquatch-kafka-exporter        1/1     1            1           78d
-sasquatch-schema-registry       1/1     1            1           106d
+   NAME                            READY   UP-TO-DATE   AVAILABLE   AGE
+   alert-database-ingester-1.0.0   1/1     1            1           18d
+   kafbat                          1/1     1            1           19d
+   sasquatch-cruise-control        1/1     1            1           106d
+   sasquatch-entity-operator       1/1     1            1           106d
+   sasquatch-kafka-exporter        1/1     1            1           78d
+   sasquatch-schema-registry       1/1     1            1           106d
 
 You want to see the database ingester as well as the schema registry.
 You can also try :command:`kubectl get pods --namespace sasquatch` as well. It will look like this:
 
 .. code-block:: bash
 
-NAME                                             READY   STATUS    RESTARTS   AGE
-alert-database-ingester-1.0.0-696f6c6dfd-t2dkt   1/1     Running   0          11d
-kafbat-64f7d6cfbd-btdxv                          1/1     Running   0          14d
-sasquatch-controller-0                           1/1     Running   0          12d
-sasquatch-controller-1                           1/1     Running   0          9d
-sasquatch-controller-2                           1/1     Running   0          9d
-sasquatch-controller-3                           1/1     Running   0          9d
-sasquatch-controller-4                           1/1     Running   0          9d
-sasquatch-cruise-control-86ddd5f995-b57k2        1/1     Running   0          11d
-sasquatch-entity-operator-67dd678579-vbfkv       2/2     Running   0          9d
-sasquatch-kafka-5                                1/1     Running   0          12d
-sasquatch-kafka-6                                1/1     Running   0          13d
-sasquatch-kafka-7                                1/1     Running   0          9d
-sasquatch-kafka-8                                1/1     Running   0          11d
-sasquatch-kafka-9                                1/1     Running   0          11d
-sasquatch-kafka-exporter-6c7f5b4987-w9wq2        1/1     Running   0          11d
-sasquatch-schema-registry-56f455c476-8wm8d       1/1     Running   0          11d
+   NAME                                             READY   STATUS    RESTARTS   AGE
+   alert-database-ingester-1.0.0-696f6c6dfd-t2dkt   1/1     Running   0          11d
+   kafbat-64f7d6cfbd-btdxv                          1/1     Running   0          14d
+   sasquatch-controller-0                           1/1     Running   0          12d
+   sasquatch-controller-1                           1/1     Running   0          9d
+   sasquatch-controller-2                           1/1     Running   0          9d
+   sasquatch-controller-3                           1/1     Running   0          9d
+   sasquatch-controller-4                           1/1     Running   0          9d
+   sasquatch-cruise-control-86ddd5f995-b57k2        1/1     Running   0          11d
+   sasquatch-entity-operator-67dd678579-vbfkv       2/2     Running   0          9d
+   sasquatch-kafka-5                                1/1     Running   0          12d
+   sasquatch-kafka-6                                1/1     Running   0          13d
+   sasquatch-kafka-7                                1/1     Running   0          9d
+   sasquatch-kafka-8                                1/1     Running   0          11d
+   sasquatch-kafka-9                                1/1     Running   0          11d
+   sasquatch-kafka-exporter-6c7f5b4987-w9wq2        1/1     Running   0          11d
+   sasquatch-schema-registry-56f455c476-8wm8d       1/1     Running   0          11d
 
 Here, the controllers 0-4 and the kafka instances 5-9 are what you want to see.
 
