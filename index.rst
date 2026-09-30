@@ -4,19 +4,11 @@ Alert Distribution System Operator's Manual
 
 .. abstract::
 
-   This is a practical collection of instructions, troubleshooting tips, and playbooks for managing and maintaining the Alert Distribution System.
+This is a collection of instructions for how to operate the Alert Distribution System.
+An overview of the system is provided in DMTN-210 :cite:`DMTN-210` which is essential background reading for this document.
 
 ..
   Technote content.
-
-
-
-.. note::
-
-   This is a practical collection of instructions, troubleshooting tips, and playbooks for managing and maintaining the Alert Distribution System.
-
-This is a collection of instructions for how to operate the Alert Distribution System.
-An overview of the system is provided in DMTN-210 :cite:`DMTN-210` which is essential background reading for this document.
 
 Basic Tools
 ===========
@@ -81,7 +73,7 @@ For additional troubleshooting tips, go to Troubleshooting :ref:`troubleshooting
 What is "Desired State" in Argo?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The "desired state" of a service is based on whatever is currently in the main branch of the `Phalanx repository`_.
+The "desired state" of a service should match the configurations set in the applications yaml files on the main branch in the `Phalanx repository`_.
 Each application has a matching *service* in the Phalanx repo - for example, `applications/sasquatch <https://github.com/lsst-sqre/phalanx/tree/main/applications/sasquatch>`__ - which contains a ``Chart.yaml`` file, contains
 a charts directory with several charts the broker depends on. At the top level, there are a number of ``values-*.yaml`` files which pertain to different
 sasquatch deployments. The two relevant files for the alert stream broker are ``values-usdfdev-prompt-processing.yaml`` and ``values-usdfprod-prompt-processing.yaml``
@@ -960,9 +952,14 @@ Troubleshooting
 
 If all of the brokers have failed but everything else is running, the brokers may be out of storage.
 This means that Kafka needs to have either the storage allotted or the retention limits adjusted. This requires a restart
-of the brokers, and may require a full re-deployment of the whole system.
+of the brokers, and may require a full re-deployment of the whole system. Restarting the brokers should not result in
+any loss of information in the Alert Stream, however restarting the whole system will result in losing the current Kafka log and
+broker positions.
 
-If you are fully restarting the Alert Broker, you may need to comment out the external load balancer and broker IP's.
+If you are fully restarting the Alert Broker, you may need to comment out the external load balancer and broker IP's. First try and restart
+everything with the load balancer and the IP's present. If you get errors for the load balancer or relating to the IP addresses,
+comment them out and wait for it to run with without it.
+
 Comment out all of the code starting from the lines pictured below through the rest of the code block. This needs
 to be done in both the `kafka.yaml template <https://github.com/lsst-sqre/phalanx/blob/main/applications/sasquatch/charts/strimzi-kafka/templates/kafka.yaml>`__ and ``values-usdfdev-prompt-processing.yaml``. Once the pods are up and running, uncomment the code so that
 the external bootstrap starts up and the IP's are properly assigned to the pods.
