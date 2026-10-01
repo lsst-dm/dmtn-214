@@ -162,9 +162,12 @@ Kafbat :cite:`kafbat` is a web application that provides a UI dashboard for moni
 It can help with peeking at messages in the Kafka topics, viewing the broker's configuration, monitoring the state of consumer groups, give
 some control over a specific consumers position in the alert stream, and more.
 
-Kafbat can be accessed at `https://usdfprod-prompt-processing.slac.stanford.edu/kafbat/` for the prod alert stream and
-`https://usdfdev-prompt-processing.slac.stanford.edu/kafbat/` for the dev alert stream. You will need to use your
-SLAC credentials to log in.
+Kafbat can be accessed for the two environments at:
+
+- Production: `https://usdfprod-prompt-processing.slac.stanford.edu/kafbat/`
+- Development: `https://usdfdev-prompt-processing.slac.stanford.edu/kafbat/`
+
+You will need to use your SLAC credentials to log in.
 
 You should see something like this:
 
@@ -958,7 +961,10 @@ broker positions.
 
 If you are fully restarting the Alert Broker, you may need to comment out the external load balancer and broker IP's. First try and restart
 everything with the load balancer and the IP's present. If you get errors for the load balancer or relating to the IP addresses,
-comment them out and wait for it to run with without it.
+comment them out and wait for it to run with without it. If everything loads successfully, you can then add back the static IPs and then
+the load balancer. If you still get errors with the IP addresses, such as them already being in use, you will need to contact
+SQUARE to get the static IPs assigned back to the Alert Stream, it is likely some other program grabbed them during the
+downtime.
 
 Comment out all of the code starting from the lines pictured below through the rest of the code block. This needs
 to be done in both the `kafka.yaml template <https://github.com/lsst-sqre/phalanx/blob/main/applications/sasquatch/charts/strimzi-kafka/templates/kafka.yaml>`__ and ``values-usdfdev-prompt-processing.yaml``. Once the pods are up and running, uncomment the code so that
