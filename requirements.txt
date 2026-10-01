@@ -1,2 +1,2 @@
 documenteer[technote]
-sphinxcontrib-lightbox2
+sphinxcontrib-images
