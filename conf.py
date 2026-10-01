@@ -3,30 +3,56 @@
 
 from documenteer.conf.technote import *  # noqa F401 F403
 
-# Add sphinxcontrib.images to the extensions list
+# Add sphinxcontrib.images and sphinxcontrib-jquery to the extensions list
 # (Using extend to ensure we don't overwrite the list)
-# Sphinx will have 'extensions' in the global scope at runtime from the import above.
-extensions.extend(["sphinxcontrib.images"])
+extensions.extend(["sphinxcontrib.images", "sphinxcontrib.jquery"])
 
-# Configure sphinxcontrib.images to override the default image directive
-# and use the LightBox2 backend for click-to-zoom functionality.
+# Configure sphinxcontrib.images
 images_config = {
     "override_image_directive": True,
     "backend": "LightBox2",
     "default_group": "default",
 }
 
-# Add custom JS to handle click-to-zoom for figures as well, 
-# since override_image_directive might not catch all figure-wrapped images.
+# Add custom JS to ensure all figures are clickable even if the extension misses them
 def setup(app):
-    app.add_js_file(None, body="""
-        $(document).ready(function() {
-            $('figure img').each(function() {
-                var $img = $(this);
-                if ($img.parent('a').length === 0) {
-                    var src = $img.attr('src');
-                    $img.wrap('<a href="' + src + '" data-lightbox="default" data-title="' + ($img.attr('alt') || '') + '"></a>');
-                }
+    import os
+    # Create _static directory in the build source if it doesn't exist
+    static_path = os.path.join(app.srcdir, '_static')
+    if not os.path.exists(static_path):
+        os.makedirs(static_path)
+    
+    js_content = """
+    (function() {
+        function initZoom() {
+            if (typeof jQuery === 'undefined') {
+                setTimeout(initZoom, 100);
+                return;
+            }
+            jQuery(document).ready(function($) {
+                // Target all images in the main content area
+                $('figure img, .section img, article img').each(function() {
+                    var $img = $(this);
+                    // Skip if already wrapped in a link
+                    if ($img.parent('a').length === 0) {
+                        var src = $img.attr('src');
+                        if (src) {
+                            $img.wrap('<a href="' + src + '" data-lightbox="technote" data-title="' + ($img.attr('alt') || '') + '"></a>');
+                            $img.css('cursor', 'zoom-in');
+                        }
+                    }
+                });
             });
-        });
-    """)
+        }
+        initZoom();
+    })();
+    """
+    js_file = os.path.join(static_path, 'lightbox_init.js')
+    with open(js_file, 'w') as f:
+        f.write(js_content)
+    
+    app.add_js_file('lightbox_init.js')
+
+# Ensure _static is in html_static_path
+if '_static' not in html_static_path:
+    html_static_path.append('_static')
