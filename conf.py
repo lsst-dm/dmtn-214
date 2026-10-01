@@ -3,4 +3,7 @@
 
 from documenteer.conf.technote import *  # noqa F401 F403
 
-extensions = ["sphinxcontrib.lightbox2"]
+# Add sphinxcontrib.lightbox2 to the extensions list
+# (Using extend to ensure we don't overwrite the list)
+# Sphinx will have 'extensions' in the global scope at runtime from the import above.
+extensions.extend(["sphinxcontrib.lightbox2"])
